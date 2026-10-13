@@ -3,6 +3,21 @@
 Newest first. Each entry lists the changes since the previous push and the output checksum of
 `patch_op1.py` for that version. The input is always the original R246 image.
 
+## 2026-10-13 20:30 — op1r 28
+
+Output `b9a7739ffa9a1530e1032902e934d0905cdf6697480d4b6e726244819fd36a1b`
+
+### Added
+- **Sample editor**: red = volume (gain −60..+24 dB, saturating), Shift + red = scroll, or with transient mode on
+  the transient sensitivity 1–7 (shown as `tr N`). Exponential fade curve (T3 cycles linear / power / exp).
+  Sampler loop points are shown (display only).
+- **Drum auto-cut**: equal mode — blue sets the number of slices (1–24, default 24); hits mode shows the
+  sensitivity on the T2 label.
+
+### Changed
+- **Faster tape erase**: only the parts of the tape file that hold clips are cleared, not the whole 124 MB file.
+- Boot screen version: `op1r 28`.
+
 ## 2026-10-13 16:02 — op1r 27
 
 Output `bc3249bc56fd64ddb1a635e551a85595250781bee6b7eef563e2732e5645c07f`
