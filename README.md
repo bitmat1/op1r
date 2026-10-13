@@ -64,7 +64,7 @@ with:
   (paste also onto the tape or another sampler slot). Shift shows the alternate key labels. Closing saves
 - **drum sample editor**: on the drum page hold **drum** and press **scissors**: the same editor for the pad played
   last (exact to the sample; pressing a key selects and shows its pad). T1 `fit` trims the pad's silence, Shift + T3
-  `auto` cuts the kit into pads (first 24 hits, or 1–24 equal slices; preview, blue sets the sensitivity (hits) or the number of slices (equal),
+  `auto` cuts the kit into pads (first 24 hits, or 1–24 equal slices; preview, blue sets the sensitivity (`hits 1`…`hits 7`) or the number of slices (equal),
   Shift + left undoes).
   Cut zeroes, drop overwrites. A red line shows the play position (also in the synth editor)
 - **count-in**: with the tape stopped, hold **REC** and press **metronome**: 4 / 8 / 16 metronome clicks, then
