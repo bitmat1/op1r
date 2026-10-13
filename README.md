@@ -176,7 +176,7 @@ version. The firmware content is still verified identical, and `--accept-recompr
 | | SHA-256 |
 |---|---|
 | input `op1_246.op1` (original R246) | `c5315218f825f143b415ca554516541898abee843d3a236df0b54c04e1fb13a9` |
-| output (reference build) | `b9a7739ffa9a1530e1032902e934d0905cdf6697480d4b6e726244819fd36a1b` (also `python3 patch_op1.py --info`) |
+| output (reference build) | `270a825cf49a4d3df9ce72ab3e5da2f4ecec22a832cf0bf3c9919857b947cb8e` (also `python3 patch_op1.py --info`) |
 
 Install the result like any OP-1 update (bootloader update mode). The bootloader is not modified, so the
 original `op1_246.op1` can always be flashed back. **Use at your own risk.**

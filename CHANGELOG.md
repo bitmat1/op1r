@@ -3,6 +3,27 @@
 Newest first. Each entry lists the changes since the previous push and the output checksum of
 `patch_op1.py` for that version. The input is always the original R246 image.
 
+## 2026-10-13 22:08 — op1r 29
+
+Output `270a825cf49a4d3df9ce72ab3e5da2f4ecec22a832cf0bf3c9919857b947cb8e`
+
+### Fixed
+- **Crackle with the quad LFO and heavy FX** (e.g. reverb plus a big delay): the quad LFO redid all its decoding
+  for every voice on every audio block. It now decodes only when an encoder changes a value and advances its
+  shared LFOs once per block. LFO-to-LFO modulation of a shared LFO can react one block (about 3 ms) later.
+  Patch and hardware test by a user, thank you.
+
+### Changed
+- Boot screen version: `op1r 29`.
+
+## 2026-10-13 21:16 — op1r 28 (web patcher fix)
+
+Output unchanged (`b9a7739ffa9a1530e1032902e934d0905cdf6697480d4b6e726244819fd36a1b`).
+
+### Fixed
+- **Web patcher**: failed with `No known package with name 'sqlite3'` (built into Pyodide 314, no separate
+  package anymore).
+
 ## 2026-10-13 20:30 — op1r 28
 
 Output `b9a7739ffa9a1530e1032902e934d0905cdf6697480d4b6e726244819fd36a1b`
