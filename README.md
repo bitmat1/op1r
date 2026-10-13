@@ -56,10 +56,11 @@ with:
   it, then punch mode turns off. PLAY while punched in: 1st press ends punch mode (recording continues), 2nd press
   stops recording. STOP stops; armed and stopped, STOP disarms. Tape + REC again cancels
 - **sample editor** (synth sampler): on the sampler page hold **synth** and press **scissors**. Blue / green move
-  start / end (the sampler's own markers, so keys play the range at once), white zooms (Shift: move the selection),
+  start / end (the sampler's own markers, so keys play the range at once); a blue press switches blue / green to the
+  loop points (shown in grey, in blue / green while edited), white zooms (Shift: move the selection),
   red sets the volume of the whole sample (−60 to +24 dB, applied on close; louder clips peaks above full scale), Shift + red scrolls (with transient snap
   on: sets the detection sensitivity, shown as `tr 1`…`tr 7`), red press snaps to zero crossings / transients /
-  off. T1 trim (Shift: DC offset), T2 zero (Shift: fade mode: in / out / both, linear / power, length on blue),
+  off. T1 trim (Shift: DC offset), T2 zero (Shift: fade mode: in / out / both, linear / power / exp, length on blue),
   T3 normalize, T4 reverse; Shift + left undoes a trim. Lift / scissors / drop copy, cut and paste the selection
   (paste also onto the tape or another sampler slot). Shift shows the alternate key labels. Closing saves
 - **drum sample editor**: on the drum page hold **drum** and press **scissors**: the same editor for the pad played
@@ -176,7 +177,7 @@ version. The firmware content is still verified identical, and `--accept-recompr
 | | SHA-256 |
 |---|---|
 | input `op1_246.op1` (original R246) | `c5315218f825f143b415ca554516541898abee843d3a236df0b54c04e1fb13a9` |
-| output (reference build) | `270a825cf49a4d3df9ce72ab3e5da2f4ecec22a832cf0bf3c9919857b947cb8e` (also `python3 patch_op1.py --info`) |
+| output (reference build) | `e660df64cb42140dfc032b9a05c504ac4d8214a5e8b5e7f436ff6e1dc694814c` (also `python3 patch_op1.py --info`) |
 
 Install the result like any OP-1 update (bootloader update mode). The bootloader is not modified, so the
 original `op1_246.op1` can always be flashed back. **Use at your own risk.**

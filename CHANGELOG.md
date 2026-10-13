@@ -5,7 +5,12 @@ Newest first. Each entry lists the changes since the previous push and the outpu
 
 ## 2026-10-13 22:08 — op1r 29
 
-Output `270a825cf49a4d3df9ce72ab3e5da2f4ecec22a832cf0bf3c9919857b947cb8e`
+Output `e660df64cb42140dfc032b9a05c504ac4d8214a5e8b5e7f436ff6e1dc694814c`
+
+### Added
+- **Sample editor: loop points.** The sampler's loop points are shown in the editor; a blue press switches blue /
+  green from start / end to the loop points (drawn in blue / green while edited). They stay inside start..end and
+  move along with trims, cuts and pastes.
 
 ### Fixed
 - **Crackle with the quad LFO and heavy FX** (e.g. reverb plus a big delay): the quad LFO redid all its decoding
