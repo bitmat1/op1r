@@ -57,7 +57,7 @@ with:
   stops recording. STOP stops; armed and stopped, STOP disarms. Tape + REC again cancels
 - **sample editor** (synth sampler): on the sampler page hold **synth** and press **scissors**. Blue / green move
   start / end (the sampler's own markers, so keys play the range at once), white zooms (Shift: move the selection),
-  red sets the volume (attenuates the whole sample, applied on close), Shift + red scrolls (with transient snap
+  red sets the volume of the whole sample (−60 to +24 dB, applied on close; louder clips peaks above full scale), Shift + red scrolls (with transient snap
   on: sets the detection sensitivity, shown as `tr 1`…`tr 7`), red press snaps to zero crossings / transients /
   off. T1 trim (Shift: DC offset), T2 zero (Shift: fade mode: in / out / both, linear / power, length on blue),
   T3 normalize, T4 reverse; Shift + left undoes a trim. Lift / scissors / drop copy, cut and paste the selection
