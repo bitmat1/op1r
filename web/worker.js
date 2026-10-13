@@ -10,7 +10,7 @@ async function setup() {
   say('log', { text: 'loading Python (first time ~10 MB, then cached) ...' });
   const py = await loadPyodide({ indexURL: PYODIDE });
   await py.loadPackage('lzma').catch(() => {});   // separate package in older Pyodide, built in since 314
-  await py.loadPackage('sqlite3');                  // unvendored stdlib module: needed to hide synths / FX
+  await py.loadPackage('sqlite3').catch(() => {});   // needed to hide synths / FX: separate package in older Pyodide, built in since 314
   const get = async (p) => {
     const r = await fetch('../' + p, { cache: 'no-cache' });
     if (!r.ok) throw new Error(`cannot load ${p} (${r.status})`);
