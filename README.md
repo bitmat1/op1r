@@ -114,11 +114,18 @@ with:
     empty step, again to remove it; a key on it adds a note
   - mutes (**Shift + G A B C D E**, D# all), 4 patterns (**Shift + F G A B**), lift / drop / scissors copy / paste /
     cut the slot (Shift: whole pattern), all saved
+- more synth engines: **mixtur** (subharmonic organ after Oskar Sala's Mixtur-Trautonium), **arc** (Duddell's
+  singing arc); more FX: **palme** (Ondes Martenot Palme / Métallique diffuseur), **in a room** (Alvin Lucier's
+  *I am sitting in a room* as a looping FX)
+- **oracle** (geomantic shield chart as a 16-step chord / drum pattern) and **peal** (English change ringing)
+  sequencers, for synth and drums
 - **MIDI sync** (tempo sync = MIDI in): on MIDI START the stock pattern sequencer, dots and euclid restart so their
   first step falls on the master's downbeat, also right after a pause; notes then follow the external clock within
   about 1 ms
 - hidden **OP-Z controller mode** in COM → CTRL, switched on by the SysEx `F0 00 20 76 00 01 03 F7`
   from the host (any MIDI tool that can send SysEx; `F0 00 20 76 00 01 00 F7` switches it off)
+- **firmware update over USB MIDI SysEx**: `tools/op1push.py` (op1r-src) stages changed files while the OP-1 runs;
+  the OP-1 then asks (T1 restart and apply, T2 cancel). te-boot is never written
 
 ## Screens
 
@@ -177,7 +184,7 @@ version. The firmware content is still verified identical, and `--accept-recompr
 | | SHA-256 |
 |---|---|
 | input `op1_246.op1` (original R246) | `c5315218f825f143b415ca554516541898abee843d3a236df0b54c04e1fb13a9` |
-| output (reference build) | `047d37d46fb98c81a871018efd834872fb56a047972dcf62e1816e96205aeada` (also `python3 patch_op1.py --info`) |
+| output (reference build) | `b79949491d19ec803d71f9e76d154689556669d4af8f000ec96d39834484e180` (also `python3 patch_op1.py --info`) |
 
 Install the result like any OP-1 update (bootloader update mode). The bootloader is not modified, so the
 original `op1_246.op1` can always be flashed back. **Use at your own risk.**

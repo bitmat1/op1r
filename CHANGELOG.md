@@ -3,6 +3,23 @@
 Newest first. Each entry lists the changes since the previous push and the output checksum of
 `patch_op1.py` for that version. The input is always the original R246 image.
 
+## 2026-10-14 20:45 — op1r 31
+
+Output `b79949491d19ec803d71f9e76d154689556669d4af8f000ec96d39834484e180`
+
+### Added
+- Synth engines **mixtur** (Mixtur-Trautonium subharmonic organ) and **arc** (Duddell's singing arc); FX **palme**
+  (Ondes Martenot diffuseur) and **in a room** (Lucier's *I am sitting in a room*) (ultralazr).
+- Sequencers **oracle** (geomantic shield chart) and **peal** (change ringing) (ultralazr).
+- Firmware update over USB MIDI SysEx (`tools/op1push.py` in op1r-src): files are staged while the OP-1 runs and
+  applied after a restart (T1 restart, T2 cancel); the boot area is never written.
+
+### Changed
+- Plugin tables indexed by order, gaps allowed (plugins/ORDERS.md) (Hundekraft).
+- supersaw, fmbell: output 6 dB lower so chords don't clip the synth bus (Hundekraft).
+- drum+: the type browser opens on DRUM+ for drum+ slots, user kits open on DRUM.
+- Boot screen version: `op1r 31`.
+
 ## 2026-10-14 08:20 — op1r 30
 
 Output `047d37d46fb98c81a871018efd834872fb56a047972dcf62e1816e96205aeada`
