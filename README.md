@@ -186,6 +186,10 @@ Original firmware files (`*.op1`, `*.ldr`, unpacked trees) are git-ignored and m
 
 See [CHANGELOG.md](CHANGELOG.md) for what changed between versions.
 
+## Support
+
+[Buy some tokens for the Clanker](https://ko-fi.com/pcppcp)
+
 ## Maintainers: rebuilding the patch data
 
 The patch data is generated from a custom firmware tree built with the synth SDK (`make_firmware.py`,
