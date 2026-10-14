@@ -3,6 +3,31 @@
 Newest first. Each entry lists the changes since the previous push and the output checksum of
 `patch_op1.py` for that version. The input is always the original R246 image.
 
+## 2026-10-14 08:20 — op1r 30
+
+Output `047d37d46fb98c81a871018efd834872fb56a047972dcf62e1816e96205aeada`
+
+### Added
+- **drum+**: a second drum instrument on the same kit (sample, pad regions). In drum mode, Shift + T1 → **DRUM+**
+  keeps the current kit and adds per-pad sound design; choosing a kit or DBOX returns to the stock drum.
+  - **T1 play**: blue pitch (stock) / Shift fine tune / press reverse; green pitch envelope / Shift glide time /
+    press playmode (gate, one-shot, loop); white retrig 2–8 hits / Shift rate (1/8 … 1/64, tempo-synced) / press
+    choke group 1–4; red drive / Shift volume (stock) / press mono.
+  - **T2 envelope and tone**: blue attack / Shift velocity → pitch / press envelope on-off; green decay / Shift
+    humanize (random start and level) / press linear-exp; white release / Shift resonance / press filter (LP, HP,
+    BP); red cutoff / Shift velocity → cutoff / press velocity → start.
+  - The pages draw the pad's waveform with the envelope, pitch envelope, retrig hits and filter over it.
+  - Settings are stored in the kit (`"op1r"` key of the drum patch); a stock OP-1 loads such a kit as a normal drum.
+    Pads without settings sound exactly as the stock drum.
+  - CPU: a fully loaded drum+ voice costs about 3× a stock drum voice (stock render reused). The resource monitor
+    (clock mode, T1) shows `drum+ x stock y` (% of the audio time) while drums play.
+
+### Changed
+- Boot screen version: `op1r 30`.
+
+### Known
+- Reopening the type browser on a drum+ slot highlights DRUM (not DRUM+).
+
 ## 2026-10-13 22:08 — op1r 29
 
 Output `e660df64cb42140dfc032b9a05c504ac4d8214a5e8b5e7f436ff6e1dc694814c`
