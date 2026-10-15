@@ -3,7 +3,7 @@
 const PYODIDE = 'https://cdn.jsdelivr.net/pyodide/v314.0.7/full/';   // tested: output matches the reference sha256
 const { loadPyodide } = await import(PYODIDE + 'pyodide.mjs');   // module worker (classic workers unsupported)
 
-const say = (type, data) => postMessage({ type, ...data });
+const say = (type, data, transfer = []) => postMessage({ type, ...data }, transfer);
 let ready;
 
 async function setup() {
@@ -44,13 +44,20 @@ if h != MAN['original']['sha256']:
     raise SystemExit('This is not the original OP-1 firmware ' + MAN['original']['name'] +
                      ' (sha256 ' + h[:16] + '...). Download it from teenage.engineering and try again.')
 log('input OK: ' + MAN['original']['name'])
-out, _ = P.patch(op1, MAN, log=log, without=list(WITHOUT))
+out, tar_bytes = P.patch(op1, MAN, log=log, without=list(WITHOUT))
 open('/out.op1', 'wb').write(out)
+import io, tarfile                                   # unpacked files for the SysEx update (devupd.js)
+FILES = []
+with tarfile.open(fileobj=io.BytesIO(tar_bytes)) as t:
+    for m in t.getmembers():
+        if m.isfile(): FILES.append((m.name, t.extractfile(m).read()))
 h = P.sha256(out)
 (h, h == MAN['result']['sha256'])
 `).toJs();
     const out = py.FS.readFile('/out.op1');
-    say('done', { out, sha: res[0], exact: res[1], hidden: e.data.without }, [out.buffer]);
+    const files = py.globals.get('FILES').toJs().map(([p, d]) => [p, d.slice()]);
+    py.runPython('del FILES');
+    say('done', { out, files, sha: res[0], exact: res[1], hidden: e.data.without }, [out.buffer, ...files.map(([, d]) => d.buffer)]);
   } catch (err) {
     const m = String(err.message || err).match(/SystemExit: (.*)/s);
     say('error', { text: m ? m[1].trim() : String(err) });

@@ -12,7 +12,8 @@
   #log { background: #000; padding: 12px; border-radius: 8px; white-space: pre-wrap; font: 13px/1.4 monospace; min-height: 4em; }
   .ok { color: #00ED95; } .err { color: #FF3A5D; } .warn { color: #FFD24D; }
   #plugins label { display: inline-block; margin: 2px 14px 2px 0; } #plugins b { display: inline-block; width: 4em; }
-  #dl { display: none; margin: 16px 0; padding: 12px 20px; background: #00ED95; color: #000; border-radius: 8px; text-decoration: none; font-weight: 600; }
+  #dl, #sx { display: none; margin: 16px 8px 16px 0; padding: 12px 20px; background: #00ED95; color: #000; border-radius: 8px; text-decoration: none; font-weight: 600; border: 0; font-size: 16px; cursor: pointer; }
+  #sx { background: #4D9EFF; } #sx:disabled { opacity: .5; cursor: default; }
 </style>
 </head>
 <body>
@@ -27,15 +28,39 @@ firmware. Everything runs in your browser: your firmware file is <b>not uploaded
 <p id="plugins">Synths and effects to include (unticked ones are hidden on the OP-1; presets that use them still
 work):<br></p>
 <div id="drop">Drop <code>op1_246.op1</code> here, or click to choose<input id="file" type="file" accept=".op1" hidden></div>
-<a id="dl" download="op1_246_op1r.op1">Download op1_246_op1r.op1</a>
+<a id="dl" download="op1_246_op1r.op1">Download op1_246_op1r.op1</a><button id="sx">Update over USB (SysEx)</button>
 <pre id="log"></pre>
 <p>The original firmware can always be flashed back. Use at your own risk.
 <a href="https://github.com/pcppcp/op1r">Source, changelog and command-line patcher</a>.
 Like it? <a href="https://ko-fi.com/pcppcp">Buy me a coffee on Ko-fi</a>.</p>
-<script>
+<p id="sxinfo" hidden>An OP-1 running op1r with SysEx update is connected: <b>Update over USB</b> sends only the
+files that differ, without the bootloader. The OP-1 then asks: <b>T1</b> restarts and applies the update,
+<b>T2</b> cancels.</p>
+<script type="module">
+import * as DU from './devupd.js';
 const $ = (id) => document.getElementById(id);
 const log = (t, cls) => { const s = document.createElement('span'); if (cls) s.className = cls; s.textContent = t + '\n'; $('log').append(s); };
-let busy = false;
+let busy = false, files = null, dev = null, midi = null;
+async function detect() {                            // op1r with SysEx update on USB MIDI? -> show the button
+  if (!files || !navigator.requestMIDIAccess) return;
+  try { midi = midi || await navigator.requestMIDIAccess({ sysex: true }); } catch { return; }   // denied / unsupported
+  midi.onstatechange = () => { if (!dev && !busy) detect(); };
+  if (dev) return;
+  dev = await DU.find(midi);
+  if (!dev) return;
+  $('sx').style.display = 'inline-block'; $('sxinfo').hidden = false;
+  log(`OP-1 found on USB MIDI: ${dev.ident || 'op1r (SysEx update protocol ' + dev.proto + ')'}`, 'ok');
+}
+$('sx').onclick = async () => {
+  if (busy || !dev) return;
+  busy = true; $('sx').disabled = true;
+  let ok = false;
+  try { await DU.push(dev, files, log); ok = true; }
+  catch (e) { log('ERROR: ' + e.message, 'err'); }
+  busy = false; $('sx').disabled = false;
+  dev.link.close(); dev = null; $('sx').style.display = 'none';
+  if (!ok) detect();                                 // after an update: found again when the OP-1 reconnects
+};
 const worker = new Worker('worker.js', { type: 'module' });
 worker.onerror = (e) => { busy = false; log('ERROR: ' + (e.message || 'the patcher could not start (no internet connection?)'), 'err'); };
 worker.onmessage = ({ data: m }) => {
@@ -44,6 +69,7 @@ worker.onmessage = ({ data: m }) => {
   if (m.type === 'error') return log('ERROR: ' + m.text, 'err');
   const url = URL.createObjectURL(new Blob([m.out], { type: 'application/octet-stream' }));
   $('dl').href = url; $('dl').style.display = 'inline-block';
+  files = m.files; detect();
   if (m.exact) log(`OK: sha256 ${m.sha}\nmatches the reference build.`, 'ok');
   else if (m.hidden.length) log(`OK: sha256 ${m.sha}\nall files verified against the reference build, then hidden: ` +
                                 m.hidden.join(', '), 'ok');
@@ -52,7 +78,7 @@ worker.onmessage = ({ data: m }) => {
 };
 function run(file) {
   if (busy || !file) return;
-  busy = true; $('log').textContent = ''; $('dl').style.display = 'none';
+  busy = true; $('log').textContent = ''; $('dl').style.display = 'none'; $('sx').style.display = 'none'; files = null;
   log(`reading ${file.name} (${file.size.toLocaleString()} bytes) ...`);
   const without = [...document.querySelectorAll('#plugins input:not(:checked)')].map((c) => c.value);
   file.arrayBuffer().then((b) => worker.postMessage({ op1: b, without }, [b]));
