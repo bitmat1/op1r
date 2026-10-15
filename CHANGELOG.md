@@ -5,7 +5,7 @@ Newest first. Each entry lists the changes since the previous push and the outpu
 
 ## 2026-10-15 21:45 — op1r 35
 
-Output `061d85652ed1892a57ed37c4d0e6b4d85f348d73700ccd07879d60d6b5788d55` (all plugins)
+Output `a4bc41410733eabee075a80de2f8dbbbd4442b539b032f2a30767765d579489f` (all plugins)
 
 ### Added
 - **MIDI sequencer** (opt-in on clock + T2, green **MIDI SEQ**, off by default): SEQ + TAPE opens a 4-track MIDI
@@ -16,6 +16,13 @@ Output `061d85652ed1892a57ed37c4d0e6b4d85f348d73700ccd07879d60d6b5788d55` (all p
   Idea by **ultralazr**, thanks!
 - **MIDI CC synth automation** of the current synth slot (absolute, stored in the sound like a knob turn): CC 53–56
   engine knobs, 57–60 envelope, 72–75 FX knobs, 76–79 LFO knobs. Recorded CCs in the sequencer play back into them.
+
+### Fixed
+- **"Bad" storage growing** in the FILE box: while recording, the tape save wrote audio that was still changing,
+  YAFFS's read-back check then failed and retired a good flash block. Saves now go through a copy, so no more good
+  blocks are marked bad (blocks already marked stay bad).
+- **Quad LFO** kept running (and moving its sliders) while the LFO was switched off; it now does nothing until it is
+  switched on again.
 
 ### Changed
 - Boot screen version: `op1r 35`.
