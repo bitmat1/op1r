@@ -3,6 +3,28 @@
 Newest first. Each entry lists the changes since the previous push and the output checksum of
 `patch_op1.py` for that version. The input is always the original R246 image.
 
+## 2026-10-15 14:51 — op1r 34
+
+Output `1011abcd2f74f250cbe99c60f75390b6c9767c38b9aa54035e5345da5b218ac4` (all plugins)
+
+### Added
+- **Synths and effects are plugin files** (`plugins/<name>.op1p`), loaded by the firmware at boot: supersaw, fmbell,
+  granular, mixtur, arc, aether, tape, clouds, reverb, palme, in a room. They keep their numbers, so existing sounds
+  still use them. Sounds find a plugin by name, so they also work after it was removed and installed again.
+- Web patcher: choose which synths / effects go into the firmware file; **Connect OP-1** (op1r 34 or newer) lists the
+  installed ones and installs / removes them over USB MIDI without a firmware file. Own plugin files (`.op1p`) can be
+  added (only from people you trust).
+- `patch_op1.py --plugins a,b|all|none` (replaces `--without`); `op1push.py --list` / `--delete` (op1r-src).
+- Safety: if a boot with plugins does not reach the UI, the next boot skips all plugins once.
+
+### Fixed
+- A sound whose effect no longer exists loads as filter instead of locking the OP-1 at boot.
+- SysEx update: creating the staging folder could fail (wrong `mkdir` entry); `op1push.py --files OP1_vdk.ldr` now
+  also sends the synth / FX list (`op1_factory.db`).
+
+### Changed
+- Boot screen version: `op1r 34`.
+
 ## 2026-10-15 11:15 — op1r 33
 
 Output `64c7f9ddd96ed5a5111fe6caa289734a65af8819294aaf0c947ef3dcf0ecc1a0`

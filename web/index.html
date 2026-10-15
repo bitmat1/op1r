@@ -5,107 +5,214 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>op1r – OP-1 custom firmware patcher</title>
 <style>
-  body { font: 16px/1.5 system-ui, sans-serif; background: #111; color: #eee; max-width: 680px; margin: 40px auto; padding: 0 16px; }
-  h1 { font-weight: 600; } a { color: #4D9EFF; }
-  #drop { border: 2px dashed #6F7173; border-radius: 12px; padding: 48px 16px; text-align: center; cursor: pointer; }
+  body { font: 16px/1.5 system-ui, sans-serif; background: #111; color: #eee; max-width: 720px; margin: 40px auto; padding: 0 16px; }
+  h1 { font-weight: 600; } h2 { font-weight: 600; font-size: 19px; margin-top: 32px; } a { color: #4D9EFF; }
+  #drop { border: 2px dashed #6F7173; border-radius: 12px; padding: 40px 16px; text-align: center; cursor: pointer; }
   #drop.over { border-color: #00ED95; }
   #log { background: #000; padding: 12px; border-radius: 8px; white-space: pre-wrap; font: 13px/1.4 monospace; min-height: 4em; }
-  .ok { color: #00ED95; } .err { color: #FF3A5D; } .warn { color: #FFD24D; }
-  #plugins label { display: inline-block; margin: 2px 14px 2px 0; } #plugins b { display: inline-block; width: 4em; }
-  #dl, #sx { display: none; margin: 16px 8px 16px 0; padding: 12px 20px; background: #00ED95; color: #000; border-radius: 8px; text-decoration: none; font-weight: 600; border: 0; font-size: 16px; cursor: pointer; }
-  #sx { background: #4D9EFF; } #sx:disabled { opacity: .5; cursor: default; }
+  .ok { color: #00ED95; } .err { color: #FF3A5D; } .warn { color: #FFD24D; } .dim { color: #6F7173; }
+  table { border-collapse: collapse; } td { padding: 2px 14px 2px 0; }
+  button, .btn { display: inline-block; margin: 12px 8px 4px 0; padding: 10px 18px; background: #4D9EFF; color: #000; border-radius: 8px;
+    text-decoration: none; font-weight: 600; border: 0; font-size: 15px; cursor: pointer; }
+  button:disabled { opacity: .4; cursor: default; } .green { background: #00ED95; } .grey { background: #AEB1DC; }
+  #dl { display: none; }
 </style>
 </head>
 <body>
 <h1>op1r – OP-1 custom firmware</h1>
 <p>Turns the original Teenage Engineering OP-1 firmware <b>R246</b> (<code>op1_246.op1</code>) into the op1r custom
-firmware. Everything runs in your browser: your firmware file is <b>not uploaded</b> anywhere.</p>
-<ol>
-  <li>Get the original <code>op1_246.op1</code> from teenage.engineering.</li>
-  <li>Drop it below (or click to choose it) and wait about half a minute.</li>
-  <li>Download the result and install it like any OP-1 update (bootloader update mode).</li>
-</ol>
-<p id="plugins">Synths and effects to include (unticked ones are hidden on the OP-1; presets that use them still
-work):<br></p>
+firmware, and manages the synth engines and effects on your OP-1. Everything runs in your browser: your firmware file
+is <b>not uploaded</b> anywhere.</p>
+
+<h2>1. Synths and effects</h2>
+<p>Ticked ones are installed. Sounds that use a missing one play the stock iter / filter until it is back.</p>
+<table id="plugins"></table>
+<p class="dim">Own plugin files (<code>.op1p</code>, e.g. from <code>make_plugin.py</code>; installed over USB):
+<input id="own" type="file" accept=".op1p" multiple></p>
+<p class="warn">Warning: a plugin is program code that runs inside the OP-1 with full access. Only install plugin files
+from people you trust. A faulty or malicious plugin can crash or lock the OP-1, damage your sounds and tapes, or
+break the device.</p>
+
+<h2>2. Firmware file</h2>
+<p>For the OP-1's bootloader update mode, or when the OP-1 runs stock / an older op1r: get the original
+<code>op1_246.op1</code> from teenage.engineering, drop it below (takes about half a minute), then download the result
+or send it over USB (section 3).</p>
 <div id="drop">Drop <code>op1_246.op1</code> here, or click to choose<input id="file" type="file" accept=".op1" hidden></div>
-<a id="dl" download="op1_246_op1r.op1">Download op1_246_op1r.op1</a><button id="sx">Update over USB (SysEx)</button>
+<a id="dl" class="btn green" download="op1_246_op1r.op1">Download op1_246_op1r.op1</a>
+
+<h2>3. OP-1 on USB</h2>
+<p>An OP-1 running op1r updates over USB MIDI (SysEx) without the bootloader: only what differs is sent, then the
+OP-1 asks – <b>T1</b> restarts and applies, <b>T2</b> cancels. Needs a browser with Web MIDI (Chrome, Edge).</p>
+<button id="connect">Connect OP-1</button>
+<button id="engines" disabled>Update synths and effects</button>
+<button id="full" disabled>Update firmware + synths and effects</button>
+<p id="devinfo" class="dim"></p>
+
 <pre id="log"></pre>
 <p>The original firmware can always be flashed back. Use at your own risk.
 <a href="https://github.com/pcppcp/op1r">Source, changelog and command-line patcher</a>.
 Like it? <a href="https://ko-fi.com/pcppcp">Buy me a coffee on Ko-fi</a>.</p>
-<p id="sxinfo" hidden>An OP-1 running op1r with SysEx update is connected: <b>Update over USB</b> sends only the
-files that differ, without the bootloader. The OP-1 then asks: <b>T1</b> restarts and applies the update,
-<b>T2</b> cancels.</p>
 <script type="module">
 import * as DU from './devupd.js';
 const $ = (id) => document.getElementById(id);
 const log = (t, cls) => { const s = document.createElement('span'); if (cls) s.className = cls; s.textContent = t + '\n'; $('log').append(s); };
-let busy = false, files = null, dev = null, midi = null, detecting = false;
-async function detect() {                            // op1r with SysEx update on USB MIDI? -> show the button
-  if (!files || !navigator.requestMIDIAccess || detecting) return;
-  detecting = true;
-  try { await detect1(); } finally { detecting = false; }
+let man = null, busy = false, files = null, dev = null, midi = null, installed = null;
+const rows = new Map();                    // file -> { name, kind, size, sha256?, data?, own?, box, state }
+
+// ---- plugin list ----
+function addRow(p) {
+  if (rows.has(p.file)) { Object.assign(rows.get(p.file), p); return render(); }
+  rows.set(p.file, { ...p, checked: true });
+  render();
 }
-async function detect1() {                           // (one at a time: port 'open' events fire statechange)
-  try { midi = midi || await navigator.requestMIDIAccess({ sysex: true }); } catch { return; }   // denied / unsupported
-  midi.onstatechange = () => { if (!dev && !busy) detect(); };
-  if (dev) return;
-  const d = await DU.find(midi);
-  if (!d) return;
-  dev = d;
-  $('sx').style.display = 'inline-block'; $('sxinfo').hidden = false;
-  log(`OP-1 found on USB MIDI: ${dev.ident || 'op1r (SysEx update protocol ' + dev.proto + ')'}`, 'ok');
-  const ldr = files.find(([p]) => p === 'OP1_vdk.ldr'), mine = ldr && DU.ldrIdent(ldr[1]);
-  if (mine && mine === dev.ident) log(`The OP-1 already runs this firmware (${mine}): an update sends only changed content files.`, 'warn');
-  else if (mine) log(`The OP-1 runs ${dev.ident || 'another version'}, this page installs ${mine}.`);
+function render() {
+  const t = $('plugins'); t.textContent = '';
+  const order = (r) => (r.kind === 'synth' ? 0 : r.kind === 'fx' ? 1 : 2) + r.name;
+  for (const r of [...rows.values()].sort((a, b) => order(a).localeCompare(order(b)))) {
+    const tr = document.createElement('tr'), c = document.createElement('input');
+    c.type = 'checkbox'; c.checked = r.checked; c.onchange = () => { r.checked = c.checked; };
+    const cell = (x, cls) => { const td = document.createElement('td'); td.textContent = x; if (cls) td.className = cls; tr.append(td); return td; };
+    const l = document.createElement('td'); l.append(c); tr.append(l);
+    cell(r.name); cell(r.kind || '?', 'dim');
+    let st = '';
+    if (installed) {
+      const on = installed.find((i) => i.file === r.file);
+      st = !on ? 'not on the OP-1' : r.size === undefined || on.size === r.size ? 'on the OP-1' : 'on the OP-1, other version';
+    }
+    cell(st + (r.own ? (st ? ', ' : '') + 'own file' : ''), 'dim');
+    t.append(tr);
+  }
 }
-$('sx').onclick = async () => {
-  if (busy || !dev) return;
-  busy = true; $('sx').disabled = true;
-  let ok = false;
-  try { await DU.push(dev, files, log); ok = true; }
-  catch (e) { log('ERROR: ' + e.message, 'err'); }
-  busy = false; $('sx').disabled = false;
-  dev.link.close(); dev = null; $('sx').style.display = 'none';
-  if (!ok) detect();                                 // after an update: found again when the OP-1 reconnects
+const selected = () => [...rows.values()].filter((r) => r.checked);
+function pluginInfo(d) {                    // (name, kind) from a .op1p (trailer -> header), null if not a plugin file
+  if (d.length < 16 + 76) return null;
+  const v = new DataView(d.buffer, d.byteOffset, d.length), at = d.length - 16;
+  if (v.getUint32(at, true) !== 0x5431504F) return null;
+  const off = v.getUint32(at + 4, true);
+  if (off + 76 > d.length || v.getUint32(off, true) !== 0x5031504F) return null;
+  const nm = d.subarray(off + 16, off + 32);
+  return { name: new TextDecoder().decode(nm.subarray(0, nm.indexOf(0) < 0 ? 16 : nm.indexOf(0))),
+           kind: ['synth', 'fx'][v.getUint32(off + 12, true)] || '?' };
+}
+async function sha256(d) { return [...new Uint8Array(await crypto.subtle.digest('SHA-256', d))].map((x) => x.toString(16).padStart(2, '0')).join(''); }
+async function pluginData(r) {              // bytes of a ticked plugin: own file, built image, or data/plugins/ (checked)
+  if (r.data) return r.data;
+  const b = files && files.find(([p]) => p === 'plugins/' + r.file);
+  if (b) return (r.data = b[1]);
+  const resp = await fetch('../data/plugins/' + r.file, { cache: 'no-cache' });
+  if (!resp.ok) throw new Error(`cannot load ${r.file} (${resp.status})`);
+  const d = new Uint8Array(await resp.arrayBuffer());
+  if (await sha256(d) !== r.sha256) throw new Error(`${r.file}: damaged download`);
+  return (r.data = d);
+}
+$('own').onchange = async (e) => {
+  for (const f of e.target.files) {
+    const d = new Uint8Array(await f.arrayBuffer()), info = pluginInfo(d);
+    if (!info || !/^[A-Za-z0-9_.-]+\.op1p$/.test(f.name)) { log(`${f.name}: not a plugin file`, 'err'); continue; }
+    addRow({ file: f.name, ...info, size: d.length, data: d, own: true });
+    log(`added ${f.name} (${info.kind} ${info.name})`);
+  }
+  e.target.value = '';
 };
+
+// ---- firmware file ----
 const worker = new Worker('worker.js', { type: 'module' });
 worker.onerror = (e) => { busy = false; log('ERROR: ' + (e.message || 'the patcher could not start (no internet connection?)'), 'err'); };
 worker.onmessage = ({ data: m }) => {
   if (m.type === 'log') return log(m.text);
-  busy = false;
+  busy = false; buttons();
   if (m.type === 'error') return log('ERROR: ' + m.text, 'err');
   const url = URL.createObjectURL(new Blob([m.out], { type: 'application/octet-stream' }));
   $('dl').href = url; $('dl').style.display = 'inline-block';
-  files = m.files; detect();
+  files = m.files; buttons();
+  const own = selected().filter((r) => r.own).map((r) => r.file);
   if (m.exact) log(`OK: sha256 ${m.sha}\nmatches the reference build.`, 'ok');
-  else if (m.hidden.length) log(`OK: sha256 ${m.sha}\nall files verified against the reference build, then hidden: ` +
-                                m.hidden.join(', '), 'ok');
-  else log(`Content verified identical to the reference, but the compressed file differs (sha256 ${m.sha}).\n` +
-           'It should still install; please report this.', 'warn');
+  else log(`OK: sha256 ${m.sha}\nfirmware verified against the reference build; synths / effects: ` +
+           (m.plugins.join(', ') || 'none'), 'ok');
+  if (own.length) log(`own plugin files are not in the .op1, install them over USB: ${own.join(', ')}`, 'warn');
 };
 function run(file) {
-  if (busy || !file) return;
-  busy = true; $('log').textContent = ''; $('dl').style.display = 'none'; $('sx').style.display = 'none'; files = null;
+  if (busy || !file || !man) return;
+  busy = true; buttons(); $('dl').style.display = 'none'; files = null;
   log(`reading ${file.name} (${file.size.toLocaleString()} bytes) ...`);
-  const without = [...document.querySelectorAll('#plugins input:not(:checked)')].map((c) => c.value);
-  file.arrayBuffer().then((b) => worker.postMessage({ op1: b, without }, [b]));
+  const plugins = selected().filter((r) => !r.own && r.sha256).map((r) => r.name);
+  file.arrayBuffer().then((b) => worker.postMessage({ op1: b, plugins }, [b]));
 }
-fetch('../data/manifest.json', { cache: 'no-cache' }).then((r) => r.json()).then((man) => {
-  for (const [kind, names] of Object.entries(man.plugins || {})) {
-    const row = document.createElement('div'); row.innerHTML = `<b>${kind}</b>`;
-    for (const n of names) {
-      const l = document.createElement('label'), c = document.createElement('input');
-      c.type = 'checkbox'; c.checked = true; c.value = n; l.append(c, ' ' + n); row.append(l);
-    }
-    $('plugins').append(row);
-  }
-}).catch(() => {});
 $('drop').onclick = () => $('file').click();
 $('file').onchange = (e) => run(e.target.files[0]);
 $('drop').ondragover = (e) => { e.preventDefault(); $('drop').classList.add('over'); };
 $('drop').ondragleave = () => $('drop').classList.remove('over');
 $('drop').ondrop = (e) => { e.preventDefault(); $('drop').classList.remove('over'); run(e.dataTransfer.files[0]); };
+
+// ---- OP-1 on USB ----
+function buttons() {
+  $('engines').disabled = busy || !dev || dev.proto < 3;
+  $('full').disabled = busy || !dev || !files;
+  $('connect').disabled = busy;
+}
+async function connect() {
+  if (busy) return;
+  if (!navigator.requestMIDIAccess) return log('this browser has no Web MIDI (use Chrome or Edge)', 'err');
+  try { midi = midi || await navigator.requestMIDIAccess({ sysex: true }); }
+  catch { return log('MIDI access was not allowed', 'err'); }
+  midi.onstatechange = () => { if (!dev && !busy) find(); };
+  await find(true);
+}
+async function find(verbose) {
+  const d = await DU.find(midi);
+  if (!d) { if (verbose) log('no OP-1 with op1r found on USB MIDI (COM mode, op1r firmware?)', 'warn'); return; }
+  dev = d;
+  const rel = man && man.result.ident;
+  $('devinfo').textContent = `Connected: ${dev.ident || 'op1r'} (update protocol ${dev.proto})` +
+    (rel && dev.ident && !dev.ident.startsWith(rel) ? ` – this page installs ${rel}` : '');
+  log(`OP-1 found: ${dev.ident || 'op1r'} (update protocol ${dev.proto})`, 'ok');
+  if (dev.proto >= 3) {
+    installed = await DU.list(dev);
+    for (const i of installed) {
+      if (!rows.has(i.file)) addRow({ file: i.file, name: i.file.replace(/\.op1p$/, ''), kind: '', size: i.size, own: true, onlyDevice: true });
+    }
+    for (const r of rows.values()) r.checked = installed.some((i) => i.file === r.file);   // tick = on the OP-1
+    render();
+    log(`${installed.length} synths / effects on the OP-1 (ticked); change the ticks and press "Update synths and effects".`);
+    if (rel && dev.ident && !dev.ident.startsWith(rel))
+      log(`The OP-1 runs ${dev.ident}; for the ${rel} firmware build the firmware file (section 2) and update both.`, 'warn');
+  } else {
+    installed = null; render();
+    log('This op1r cannot manage plugin files yet: build the firmware file (section 2) and press "Update firmware + ...".', 'warn');
+  }
+  buttons();
+}
+async function update(withFirmware) {
+  if (busy || !dev) return;
+  busy = true; buttons();
+  let ok = false;
+  try {
+    const plug = [];
+    for (const r of selected()) {
+      if (r.onlyDevice) continue;                                  // already there, kept as it is
+      plug.push(['plugins/' + r.file, await pluginData(r)]);
+    }
+    let send = withFirmware ? files.filter(([p]) => !p.startsWith('plugins/')) : [];
+    if (dev.proto >= 3) send = send.concat(plug);
+    const deletes = dev.proto >= 3 && installed
+      ? installed.filter((i) => !selected().some((r) => r.file === i.file)).map((i) => 'plugins/' + i.file) : [];
+    await DU.push(dev, send, log, deletes);
+    if (dev.proto < 3) log('After the restart: connect again and press "Update synths and effects" to install them.', 'warn');
+    ok = true;
+  } catch (e) { log('ERROR: ' + e.message, 'err'); }
+  busy = false;
+  dev.link.close(); dev = null; installed = null; buttons(); render();
+  $('devinfo').textContent = ok ? 'The OP-1 restarts; connect again afterwards.' : '';
+}
+$('connect').onclick = connect;
+$('engines').onclick = () => update(false);
+$('full').onclick = () => update(true);
+
+fetch('../data/manifest.json', { cache: 'no-cache' }).then((r) => r.json()).then((m) => {
+  man = m;
+  for (const p of man.plugins || []) addRow({ ...p });
+}).catch(() => log('cannot load the patch data (data/manifest.json)', 'err'));
+buttons();
 </script>
 </body>
 </html>

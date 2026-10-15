@@ -2,7 +2,7 @@
 // The OP-1 stages the files while it runs and asks before anything is applied: T1 restart + apply, T2 cancel.
 // Only a physical T1 press confirms (MIDI key events are ignored while the prompt is shown).
 const HDR = [0xF0, 0x00, 0x20, 0x76, 0x7D];
-export const HELLO = 1, BEGIN = 2, DATA = 3, END = 4, COMMIT = 5, ABORT = 6, STAT = 7, IDENT = 8;
+export const HELLO = 1, BEGIN = 2, DATA = 3, END = 4, COMMIT = 5, ABORT = 6, STAT = 7, IDENT = 8, DELETE = 9, LIST = 10;
 const MAX_DATA = 192, WINDOW = 8, TIMEOUT = 2000;
 const ST = { 0: 'ok', 1: 'format', 2: 'state', 3: 'path', 4: 'size', 5: 'offset', 6: 'crc', 7: 'io', 8: 'full',
              9: 'wait key', 10: 'no file' };
@@ -38,8 +38,10 @@ export function pathOk(p) {
   const low = p.toLowerCase();
   return /^[A-Za-z0-9_.\-/]+$/.test(p) && p.length < 96 && !p.startsWith('/') && !p.endsWith('/') &&
     !/te-boot|te_boot|teboot/.test(low) && !p.includes('..') && !p.includes('//') &&
-    (p === 'OP1_vdk.ldr' || p.startsWith('content/'));
+    (p === 'OP1_vdk.ldr' || p.startsWith('content/') || pluginPath(p));
 }
+// plugin files (synth engines / FX loaded at boot, protocol 3 can list and delete them)
+export const pluginPath = (p) => /^plugins\/[A-Za-z0-9_.\-]+\.op1p$/.test(p);   // (the name before .op1p: at least one character)
 // the user's sampler slots, settings / patches and tape clips: never sent
 export const userData = (p) => /^content\/(audio\/(drum|synth)\/|op1\.db$|tape\.db$)/.test(p);
 // boot text in an OP1_vdk.ldr ("op1r <n> [build time]"), null if none (as op1push.ldr_ident)
@@ -102,9 +104,22 @@ export async function find(midi) {
   return null;
 }
 
+// plugin files on the OP-1 (protocol 3): [{ file, size }]
+export async function list(dev) {
+  if (dev.proto < 3) throw new Error('this OP-1 firmware cannot list plugin files (update the firmware first)');
+  const L = dev.link, out = [];
+  L.attach(); L.q = [];
+  for (let i = 0; ; i++) {
+    const r = await L.ask(LIST, Uint8Array.from([i & 255, i >> 8]));
+    if (r.st) break;
+    out.push({ file: new TextDecoder().decode(r.pl.subarray(4)), size: rd32(r.pl) });
+  }
+  return out;
+}
+
 // files: [[path, Uint8Array]]; only those that differ on the device are sent (protocol 2: STAT sizes, IDENT for the
 // LDR). log(text). Resolves when the OP-1 confirmed (it then restarts and applies), rejects on refusal / cancel.
-export async function push(dev, files, log) {
+export async function push(dev, files, log, deletes = []) {   // deletes: plugin paths (protocol 3)
   const L = dev.link;
   L.attach(); L.q = [];
   log('asking the OP-1 which files it has ...');
@@ -122,7 +137,9 @@ export async function push(dev, files, log) {
     log(`${keep.length} of ${files.length} files differ on the OP-1`);
     files = keep;
   }
-  if (!files.length) return log('nothing to send: the OP-1 already has this firmware');
+  deletes = deletes.filter(pluginPath);
+  if (deletes.length && dev.proto < 3) throw new Error('this OP-1 firmware cannot delete plugin files (update the firmware first)');
+  if (!files.length && !deletes.length) return log('nothing to send: the OP-1 already has all of it');
   await L.ask(ABORT);
   const total = files.reduce((n, [, d]) => n + d.length, 0), t0 = performance.now();
   let done = 0;
@@ -152,6 +169,11 @@ export async function push(dev, files, log) {
     const e = await L.ask(END);
     if (e.st) throw new Error(`${p}: ${ST[e.st] || e.st}`);
   }
+  for (const p of deletes) {
+    const r = await L.ask(DELETE, enc(p));
+    if (r.st) throw new Error(`${p}: delete refused (${ST[r.st] || r.st})`);
+    log(`  delete: ${p}`);
+  }
   log('confirm on the OP-1: T1 restart and apply, T2 cancel');
   for (let asked = false; ;) {
     const r = await L.ask(COMMIT);
@@ -161,5 +183,6 @@ export async function push(dev, files, log) {
     asked = true;
     await new Promise((res) => setTimeout(res, 300));
   }
-  log(`sent ${files.length} files (${(total / 1e6).toFixed(1)} MB); the OP-1 restarts and applies the update.`);
+  log(`sent ${files.length} files (${(total / 1e6).toFixed(2)} MB)` + (deletes.length ? `, ${deletes.length} deletes` : '') +
+      '; the OP-1 restarts and applies the update.');
 }

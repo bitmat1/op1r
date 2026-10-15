@@ -9,11 +9,12 @@ reference build.
     python3 patch_op1.py op1_246.op1                    # -> op1_246-custom.op1
     python3 patch_op1.py op1_246.op1 -o my.op1
     python3 patch_op1.py --info                         # show what the patch contains
-    python3 patch_op1.py op1_246.op1 --without clouds,granular   # hide synths / FX you don't want
+    python3 patch_op1.py op1_246.op1 --plugins supersaw,clouds   # only these synths / FX (default: all)
+    python3 patch_op1.py op1_246.op1 --plugins none              # firmware only (manage engines over USB later)
 
---without removes the named custom synths / FX from the OP-1's selection lists (their code stays in, so saved
-presets that use them still load and play). The result then differs from the reference build: every file is still
-verified before that last step.
+Synth engines and FX are plugin files (/yaffs2/plugins/<name>.op1p, loaded by the firmware at boot). --plugins picks
+which ones go into the update; sounds that use a missing one play the stock iter / filter. The firmware part is always
+verified against the reference build (which contains all plugins), each plugin file against its checksum.
 
 Only the Python standard library is needed (Python >= 3.8). Pipeline:
   .op1 = CRC32 (LE) + LZMA "alone" stream of a tar archive (see docs/01).
@@ -26,8 +27,6 @@ import argparse, binascii, copy, hashlib, io, json, lzma, os, struct, sys, tarfi
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(HERE, 'data')
 # LZMA settings of op1repacker (known to install: the OP-1 needs < 15 MB and limited decoder RAM)
-FACTORY_DB = 'content/op1_factory.db'
-PLUGIN_TABLES = {'synth': 'synth_types', 'fx': 'fx_types'}
 LZMA_FILTERS = [{'id': lzma.FILTER_LZMA1, 'preset': 9, 'lc': 3, 'lp': 1, 'pb': 2, 'dict_size': 2 ** 23}]
 
 
@@ -101,28 +100,31 @@ def load_manifest():
     return json.load(open(path))
 
 
-def hide_plugins(db, man, names):
-    """factory DB bytes -> DB bytes without the picker rows of the named custom synths / FX"""
-    import sqlite3, tempfile
-    known = {n: k for k, ns in man.get('plugins', {}).items() for n in ns}
-    bad = [n for n in names if n not in known]
+def plugin_members(members, man, names, log=print):
+    """tar members (dir + files) for the named plugin files (data/plugins/, checked against the manifest)"""
+    cat = {p['name']: p for p in man.get('plugins', [])}
+    bad = [n for n in names if n not in cat]
     if bad:
-        fail('--without: unknown synth / FX ' + ', '.join(bad) + ' (can hide: ' + ', '.join(known) + ')')
-    fd, path = tempfile.mkstemp(suffix='.db')
-    try:
-        os.write(fd, db); os.close(fd)
-        c = sqlite3.connect(path)
-        for n in names:
-            c.execute(f'DELETE FROM {PLUGIN_TABLES[known[n]]} WHERE type=?', (n,))
-        c.commit(); c.close()
-        return open(path, 'rb').read()
-    finally:
-        os.remove(path)
+        fail('unknown synth / FX ' + ', '.join(bad) + ' (available: ' + ', '.join(cat) + ')')
+    if not names:
+        return []
+    by_name = {m.name: m for m, _ in members}
+    d = copy.copy(by_name[man['plugin_dir_template']]); d.name = 'plugins'
+    out = [(d, None)]
+    for n in sorted(names, key=lambda n: cat[n]['file']):
+        p = cat[n]
+        data = open(os.path.join(DATA, 'plugins', p['file']), 'rb').read()
+        if sha256(data) != p['sha256']:
+            fail(f'plugin {n}: patch data is damaged')
+        info = copy.copy(by_name[man['plugin_file_template']]); info.name = 'plugins/' + p['file']
+        out.append((info, data))
+        log(f'  plugin  {p["file"]}')
+    return out
 
 
-def patch(op1, man, log=print, verify=True, without=()):
+def patch(op1, man, log=print, verify=True, plugins=None):
     """original .op1 bytes -> (patched .op1 bytes, tar bytes); verify=False only for build_patch.py.
-    without: custom synth / FX names to hide (applied after all checks; the result is then not the reference)"""
+    plugins: names of the plugin files to include (None: all = the reference build)"""
     log('unpacking ...')
     _, members = unpack(op1)
     by_name = {m.name: i for i, (m, _) in enumerate(members)}
@@ -155,12 +157,13 @@ def patch(op1, man, log=print, verify=True, without=()):
         members.append((info, data))
         log(f'  added   {f["path"]}')
 
-    if verify and sha256(pack_tar(members)) != man['result']['tar_sha256']:
-        fail('the repacked archive does not match the reference')
-    if without:
-        i = by_name[FACTORY_DB]
-        members[i] = (members[i][0], hide_plugins(members[i][1], man, without))
-        log('  hidden  ' + ', '.join(without))
+    every = [p['name'] for p in man.get('plugins', [])]
+    plugins = every if plugins is None else list(plugins)
+    if verify:                                                  # the reference: firmware + every plugin file
+        ref = pack_tar(members + plugin_members(members, man, every, log=lambda t: None))
+        if sha256(ref) != man['result']['tar_sha256']:
+            fail('the repacked archive does not match the reference')
+    members = members + plugin_members(members, man, plugins, log)
     log('packing tar ...')
     tar_bytes = pack_tar(members)
     log('compressing (LZMA, takes a while) ...')
@@ -178,8 +181,8 @@ def main():
     ap.add_argument('--accept-recompressed', action='store_true',
                     help='keep the output if only the LZMA compression differs from the reference '
                          '(content verified identical, e.g. different liblzma version)')
-    ap.add_argument('--without', default='', metavar='NAMES',
-                    help='comma-separated custom synths / FX to hide from the OP-1 (see --info)')
+    ap.add_argument('--plugins', default='all', metavar='NAMES',
+                    help='synths / FX to include: comma-separated names, "all" (default) or "none" (see --info)')
     a = ap.parse_args()
     man = load_manifest()
 
@@ -191,8 +194,9 @@ def main():
         print(f'output : sha256 {man["result"]["sha256"]}')
         print(f'patched: ' + ', '.join(f['path'] for f in man['patched_files']))
         print(f'added  : ' + ', '.join(f['path'] for f in man['added_files']))
-        for k, ns in man.get('plugins', {}).items():
-            print(f'{k + " plugins":15s}: ' + ', '.join(ns) + '  (can be hidden with --without)')
+        for k in ('synth', 'fx'):
+            ns = [p['name'] for p in man.get('plugins', []) if p['kind'] == k]
+            print(f'{k + " plugins":15s}: ' + ', '.join(ns) + '  (choose with --plugins)')
         if not a.firmware and not a.info:
             print('\nusage: python3 patch_op1.py op1_246.op1 [-o output.op1]')
         return
@@ -204,14 +208,16 @@ def main():
              f'  expected sha256 {man["original"]["sha256"]}\n  got      sha256 {h}')
     print(f'input OK: {man["original"]["name"]} (sha256 {h[:16]}...)')
 
-    without = [n.strip() for n in a.without.split(',') if n.strip()]
-    out, _ = patch(op1, man, without=without)
+    every = [p['name'] for p in man.get('plugins', [])]
+    sel = every if a.plugins == 'all' else [] if a.plugins == 'none' else \
+        [n.strip() for n in a.plugins.split(',') if n.strip()]
+    out, _ = patch(op1, man, plugins=sel)
     dst = a.output or os.path.splitext(a.firmware)[0] + '-custom.op1'
     h = sha256(out)
-    if without:
+    if sorted(sel) != sorted(every):
         open(dst, 'wb').write(out)
-        print(f'\nOK: {dst}\n  sha256 {h}\n  all files verified against the reference build, then hidden: '
-              + ', '.join(without))
+        print(f'\nOK: {dst}\n  sha256 {h}\n  firmware verified against the reference build; plugins: '
+              + (', '.join(sel) or 'none'))
         return
     if h == man['result']['sha256']:
         open(dst, 'wb').write(out)

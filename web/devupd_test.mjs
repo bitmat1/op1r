@@ -8,11 +8,13 @@ assert.equal(Buffer.from(v).toString('hex'), process.argv[2]);
 for (let n = 0; n < 40; n++) { const b = Uint8Array.from({ length: n }, (_, i) => (i * 97 + n) & 255); assert.deepEqual(DU.unpack7(Uint8Array.from(DU.pack7(b))), b); }
 assert(DU.userData('content/audio/drum/drum_1.raw') && DU.userData('content/tape.db') && !DU.userData('content/op1_factory.db') && !DU.userData('content/op1.dbx'));
 assert(DU.pathOk('content/display/a.svg') && DU.pathOk('OP1_vdk.ldr') && !DU.pathOk('te-boot.ldr') && !DU.pathOk('content/../x'));
+assert(DU.pathOk('plugins/bell.op1p') && !DU.pathOk('plugins/a/b.op1p') && !DU.pathOk('plugins/x.svg') && !DU.pluginPath('plugins/.op1p'));
 const ldr = new Uint8Array(200); ldr.set(new TextEncoder().encode('\n'.repeat(17) + '    op1r 32 2026-10-15 09:00\0'), 50);
 assert.equal(DU.ldrIdent(ldr), 'op1r 32 2026-10-15 09:00');
 
 // simulated OP-1: has a.svg (same size), b.svg (other size), no c.svg, runs "op1r 31"; drops every 7th DATA once
-const have = { 'content/a.svg': 10, 'content/b.svg': 5 }, staged = {}, dropped = new Set();
+const have = { 'content/a.svg': 10, 'content/b.svg': 5, 'plugins/x.op1p': 3, 'plugins/y.op1p': 4 }, staged = {}, dropped = new Set(), deleted = [];
+let proto = 2;
 let open = null, wr = 0, buf = [], commits = 0, ndata = 0, onmsg;
 const reply = (m, st, pl = []) => onmsg({ data: DU.build(m[5] | 0x40, m[6] | m[7] << 7, Uint8Array.from([st, ...pl])) });
 const u32 = (x) => [x & 255, x >> 8 & 255, x >> 16 & 255, x >>> 24];
@@ -20,7 +22,10 @@ const out = { name: 'OP-1 MIDI', send(m) {
   m = Uint8Array.from(m); const pl = DU.unpack7(m.subarray(8, m.length - 1)), cmd = m[5];
   const str = (b) => new TextDecoder().decode(b.subarray(0, b.indexOf(0)));
   setTimeout(() => {
-    if (cmd === DU.HELLO) return reply(m, 0, u32(2));
+    if (cmd === DU.HELLO) return reply(m, 0, u32(proto));
+    if (cmd === DU.LIST) { const ps = Object.keys(have).filter((k) => k.startsWith('plugins/')), i = pl[0] | pl[1] << 8;
+      return i < ps.length ? reply(m, 0, [...u32(have[ps[i]]), ...new TextEncoder().encode(ps[i].slice(8))]) : reply(m, 10); }
+    if (cmd === DU.DELETE) { deleted.push(str(pl)); return reply(m, 0); }
     if (cmd === DU.IDENT) return reply(m, 0, [...new TextEncoder().encode('op1r 31')]);
     if (cmd === DU.STAT) { const s = have[str(pl)]; return s === undefined ? reply(m, 10) : reply(m, 0, u32(s)); }
     if (cmd === DU.ABORT) return reply(m, 0);
@@ -45,4 +50,13 @@ await DU.push(dev, [['content/a.svg', new Uint8Array(10)], ['content/b.svg', new
 assert.deepEqual(Object.keys(staged).sort(), ['OP1_vdk.ldr', 'content/b.svg', 'content/c.svg']);
 assert.deepEqual(staged['content/c.svg'], big); assert.deepEqual(staged['OP1_vdk.ldr'], ldr);
 assert.equal(commits, 3);
+// protocol 3: list + engines-only update (no firmware): x.op1p same size (skipped), z.op1p new, y.op1p deleted
+proto = 3; commits = 0; for (const k in staged) delete staged[k];
+const dev3 = await DU.find(midi);
+assert.equal(dev3.proto, 3);
+assert.deepEqual(await DU.list(dev3), [{ file: 'x.op1p', size: 3 }, { file: 'y.op1p', size: 4 }]);
+await DU.push(dev3, [['plugins/x.op1p', new Uint8Array(3)], ['plugins/z.op1p', big]], () => {}, ['plugins/y.op1p', 'content/op1.db']);
+assert.deepEqual(Object.keys(staged), ['plugins/z.op1p']); assert.deepEqual(deleted, ['plugins/y.op1p']);
+proto = 2; const dev2 = await DU.find(midi);
+await assert.rejects(DU.list(dev2)); await assert.rejects(DU.push(dev2, [], () => {}, ['plugins/y.op1p']));
 console.log('devupd.js: ok');

@@ -63,14 +63,21 @@ def file_ops(name, a, b, blobdir):
     return ops
 
 
-def plugin_rows(custom):
-    """custom synths / FX = DB rows whose default_params[4] is the plugin selector 0x5300 + n (hideable)"""
-    import sqlite3
-    c = sqlite3.connect(os.path.join(custom, P.FACTORY_DB))
-    res = {k: [t for t, p in c.execute(f'SELECT type, default_params FROM {P.PLUGIN_TABLES[k]} ORDER BY id')
-               if 0x5300 < json.loads(p)[4] <= 0x530F] for k in P.PLUGIN_TABLES}
-    c.close()
-    return res
+def plugin_info(data):
+    """(name, kind) from a .op1p file (trailer -> header, synth_sdk/plugload/op1p.h)"""
+    import struct
+    tm, off, ln, _ = struct.unpack_from('<4I', data, len(data) - 16)
+    assert tm == 0x5431504F, 'not a plugin file'
+    mg, _, _, kind, name = struct.unpack_from('<4I16s', data, off)
+    assert mg == 0x5031504F, 'not a plugin file'
+    return name.split(b'\0')[0].decode(), ('synth', 'fx')[kind]
+
+
+def ldr_ident(ldr):
+    """boot text of the release ("op1r <n>"): the web updater compares it with the OP-1's IDENT"""
+    import re
+    m = re.search(rb'\n{17} *(op1r [ -~]*)', ldr)
+    return m.group(1).decode() if m else ''
 
 
 def main():
@@ -89,7 +96,8 @@ def main():
     shutil.rmtree(P.DATA, ignore_errors=True)
     blobdir = P.DATA
     os.makedirs(os.path.join(blobdir, 'files'))
-    patched, added = [], []
+    patched, added, plugins = [], [], []
+    os.makedirs(os.path.join(blobdir, 'plugins'))
     import re                                                     # local builds stamp the boot text with the time
     ldr = open(os.path.join(a.custom, 'OP1_vdk.ldr'), 'rb').read()
     if re.search(rb'op1r \d+ \d{4}-\d\d-\d\d \d\d:\d\d', ldr):
@@ -102,6 +110,12 @@ def main():
             if fn.startswith('.'):
                 continue
             data = open(full, 'rb').read()
+            if rel.startswith('plugins/'):                 # plugin files: our code + SVG, shipped whole, selectable
+                name, kind = plugin_info(data)
+                shutil.copy(full, os.path.join(blobdir, 'plugins', fn))
+                plugins.append({'name': name, 'kind': kind, 'file': fn, 'size': len(data), 'sha256': P.sha256(data)})
+                print(f'plugin  {rel} ({kind} {name})')
+                continue
             if rel in orig:
                 if data != orig[rel]:
                     ops = file_ops(rel, orig[rel], data, blobdir)
@@ -135,12 +149,15 @@ def main():
                            '  euclid sequencer (6 slots), OP-Z controller mode (SysEx F0 00 20 76 00 01 03 F7).',
                            'Built with synth_sdk/make_firmware.py; see docs/.'],
            'original': {'name': os.path.basename(a.original), 'sha256': P.sha256(op1)},
-           'patched_files': patched, 'added_files': added, 'plugins': plugin_rows(a.custom),
+           'patched_files': patched, 'added_files': added,
+           'plugins': sorted(plugins, key=lambda p: (p['kind'] != 'synth', p['file'])),
+           'plugin_dir_template': 'content', 'plugin_file_template': 'content/op1_factory.db',
            'result': {'tar_sha256': '', 'sha256': ''}}
 
     # reference: run the real patch pipeline once (per-file checks active, result not known yet)
     out, tar_bytes = P.patch(op1, man, verify=False)
-    man['result'] = {'tar_sha256': P.sha256(tar_bytes), 'sha256': P.sha256(out), 'size': len(out)}
+    man['result'] = {'tar_sha256': P.sha256(tar_bytes), 'sha256': P.sha256(out), 'size': len(out),
+                     'ident': ldr_ident(ldr)}
     json.dump(man, open(os.path.join(P.DATA, 'manifest.json'), 'w'), indent=1)
 
     ref = a.reference or os.path.normpath(a.custom) + '-patched.op1'

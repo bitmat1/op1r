@@ -127,8 +127,10 @@ with:
   about 1 ms
 - hidden **OP-Z controller mode** in COM → CTRL, switched on by the SysEx `F0 00 20 76 00 01 03 F7`
   from the host (any MIDI tool that can send SysEx; `F0 00 20 76 00 01 00 F7` switches it off)
-- **firmware update over USB MIDI SysEx**: `tools/op1push.py` (op1r-src) stages changed files while the OP-1 runs;
-  the OP-1 then asks (T1 restart and apply, T2 cancel). te-boot is never written
+- **firmware update over USB MIDI SysEx**: `tools/op1push.py` (op1r-src) or the web patcher stage changed files
+  while the OP-1 runs; the OP-1 then asks (T1 restart and apply, T2 cancel). te-boot is never written
+- **synths and effects as plugin files**: loaded at boot from `plugins/`, installed / removed one by one (web
+  patcher or `op1push.py`) without a firmware update; a plugin that locks the OP-1 at boot is skipped on the next boot
 
 ## Screens
 
@@ -166,13 +168,21 @@ git clone https://github.com/pcppcp/op1r.git && cd op1r
 python3 patch_op1.py /path/to/op1_246.op1            # -> /path/to/op1_246-custom.op1
 python3 patch_op1.py /path/to/op1_246.op1 -o op1-custom.op1
 python3 patch_op1.py --info                          # what the patch contains + checksums
-python3 patch_op1.py /path/to/op1_246.op1 --without clouds,granular   # hide synths / FX you don't want
+python3 patch_op1.py /path/to/op1_246.op1 --plugins supersaw,clouds   # only these synths / FX (default: all)
+python3 patch_op1.py /path/to/op1_246.op1 --plugins none              # firmware only
 ```
 
-**Choosing synths and FX:** `--without` (or unticking them in the web patcher) hides custom synths / FX from the
-OP-1's selection lists. Their code stays in the firmware, so presets that already use them still load and play.
-`--info` lists the names. The result is then not the reference build: every file is verified first, and only the
-selection lists change afterwards, so its checksum differs from the one below.
+**Choosing synths and FX:** the custom synth engines and effects are plugin files (`plugins/<name>.op1p` on the
+OP-1), loaded by the firmware at boot. `--plugins` (or the ticks in the web patcher) picks which ones are installed;
+`--info` lists the names. Sounds that use a missing one play the stock iter / filter until it is back, then they find
+it again by name. With a selection the checksum differs from the one below: the firmware is still verified against
+the reference build, each plugin file against its own checksum.
+
+**Managing them later:** an OP-1 that runs op1r 34 or newer needs no firmware file for this. The web patcher
+(**Connect OP-1**, section 3) shows the installed synths / effects, installs ticked ones and removes unticked ones over
+USB MIDI; the OP-1 asks before anything changes (T1 restart and apply, T2 cancel). From the command line:
+`op1push.py --port … --list` / `--delete plugins/<name>.op1p` / `--files plugins/<name>.op1p` (op1r-src).
+Only install plugin files from people you trust: a plugin is program code with full access to the OP-1.
 
 The patcher:
 1. Checks the input SHA-256 against the original R246 image and refuses anything else.
@@ -187,7 +197,7 @@ version. The firmware content is still verified identical, and `--accept-recompr
 | | SHA-256 |
 |---|---|
 | input `op1_246.op1` (original R246) | `c5315218f825f143b415ca554516541898abee843d3a236df0b54c04e1fb13a9` |
-| output (reference build) | `64c7f9ddd96ed5a5111fe6caa289734a65af8819294aaf0c947ef3dcf0ecc1a0` (also `python3 patch_op1.py --info`) |
+| output (reference build, all plugins) | `1011abcd2f74f250cbe99c60f75390b6c9767c38b9aa54035e5345da5b218ac4` (also `python3 patch_op1.py --info`) |
 
 Install the result like any OP-1 update (bootloader update mode). The bootloader is not modified, so the
 original `op1_246.op1` can always be flashed back. **Use at your own risk.**
