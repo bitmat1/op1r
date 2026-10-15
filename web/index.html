@@ -50,6 +50,9 @@ async function detect() {                            // op1r with SysEx update o
   if (!dev) return;
   $('sx').style.display = 'inline-block'; $('sxinfo').hidden = false;
   log(`OP-1 found on USB MIDI: ${dev.ident || 'op1r (SysEx update protocol ' + dev.proto + ')'}`, 'ok');
+  const ldr = files.find(([p]) => p === 'OP1_vdk.ldr'), mine = ldr && DU.ldrIdent(ldr[1]);
+  if (mine && mine === dev.ident) log(`The OP-1 already runs this firmware (${mine}): an update sends only changed content files.`, 'warn');
+  else if (mine) log(`The OP-1 runs ${dev.ident || 'another version'}, this page installs ${mine}.`);
 }
 $('sx').onclick = async () => {
   if (busy || !dev) return;

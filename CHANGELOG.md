@@ -3,6 +3,21 @@
 Newest first. Each entry lists the changes since the previous push and the output checksum of
 `patch_op1.py` for that version. The input is always the original R246 image.
 
+## 2026-10-15 09:30 — op1r 32
+
+Output `87ad2ccb3b65cc41cde2f1aff6d841bb30555bfdf36c081d887c9d0ca8c4a215`
+
+### Added
+- Web patcher: **Update over USB (SysEx)** button when a connected OP-1 runs op1r with SysEx update (Chrome / Edge,
+  Web MIDI). Sends only the files that differ; the OP-1 asks before anything is applied (T1 restart, T2 cancel).
+- SysEx update: the OP-1 reports file sizes and its firmware version, so only changed files are sent
+  (`op1push.py --force` sends everything).
+
+### Changed
+- Security: while the update prompt is shown, MIDI key events (CC control) are ignored: only a physical T1 press
+  confirms. The prompt shows **NEW FIRMWARE** when the main firmware is replaced.
+- Boot screen version: `op1r 32`.
+
 ## 2026-10-14 20:45 — op1r 31
 
 Output `b79949491d19ec803d71f9e76d154689556669d4af8f000ec96d39834484e180`
