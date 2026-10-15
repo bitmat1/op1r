@@ -3,6 +3,22 @@
 Newest first. Each entry lists the changes since the previous push and the output checksum of
 `patch_op1.py` for that version. The input is always the original R246 image.
 
+## 2026-10-15 21:45 — op1r 35
+
+Output `061d85652ed1892a57ed37c4d0e6b4d85f348d73700ccd07879d60d6b5788d55` (all plugins)
+
+### Added
+- **MIDI sequencer** (opt-in on clock + T2, green **MIDI SEQ**, off by default): SEQ + TAPE opens a 4-track MIDI
+  recorder synced to the tape (position, play / stop, loop, tape markers). Per track input (keyboard, stock
+  sequencers, USB MIDI channel) and output (instrument, stock sequencer, USB MIDI channel); REC held / latched
+  recording of notes and CCs; scissors selection, lift (Shift: all tracks, playhead jumps to the first note), drop.
+  One song file; while off, SEQ + TAPE is stock and the sequencer does no work.
+- **MIDI CC synth automation** of the current synth slot (absolute, stored in the sound like a knob turn): CC 53–56
+  engine knobs, 57–60 envelope, 72–75 FX knobs, 76–79 LFO knobs. Recorded CCs in the sequencer play back into them.
+
+### Changed
+- Boot screen version: `op1r 35`.
+
 ## 2026-10-15 14:51 — op1r 34
 
 Output `49ce1f5977a0690f0dac42896d3c853c33023a0bf09b3a1bd70cfa58ab6df195` (all plugins)

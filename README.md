@@ -96,6 +96,15 @@ with:
   - encoders: CC 102–105 = blue/green/white/red, relative (1–63 up, 65–127 down); works on every screen
   - mixer: CC 106–109 track 1–4 volume, 110–113 pan (64 = centre), 114–117 mute (≥ 64 = muted); CC 118 tape input
     level
+  - **synth automation** (current synth slot, absolute 0–127, changes the sound like turning the knob): CC 53–56
+    engine knobs, 57–60 envelope A/D/S/R, 72–75 FX knobs (when the FX is on), 76–79 LFO knobs (when the LFO is on)
+- **MIDI sequencer** (opt-in: clock screen + **T2**, green knob **MIDI SEQ ON**): **SEQ + TAPE** opens a 4-track MIDI
+  recorder that runs with the tape (same position, play / stop, loop, markers). **T1–T4** select the track
+  (Shift: mute), hold **REC** to record the selected track (Shift + REC latched), **white press** switches between
+  the track's input and output, **white turn** chooses I (keyboard), S (stock sequencers / arpeggio), M1–M16 (USB
+  MIDI channel) as input and I (instrument), S (stock sequencer), M1–M16 (USB MIDI out) as output. **Scissors** sets
+  the selection start / end, **lift** cuts it from the track (Shift + lift: all tracks) and moves the playhead to the
+  first note, **drop** pastes at the playhead. Notes and CCs, saved in one song file; TAPE leaves the view
 - **dots** step sequencer (pick it in the sequencer list), for synth and drums
   - 6 slots playing at the same time, each up to 64 steps (4 rows of 16 dots); a step is empty (grey) or a
     trigger (green) with its own note and level
@@ -197,7 +206,7 @@ version. The firmware content is still verified identical, and `--accept-recompr
 | | SHA-256 |
 |---|---|
 | input `op1_246.op1` (original R246) | `c5315218f825f143b415ca554516541898abee843d3a236df0b54c04e1fb13a9` |
-| output (reference build, all plugins) | `49ce1f5977a0690f0dac42896d3c853c33023a0bf09b3a1bd70cfa58ab6df195` (also `python3 patch_op1.py --info`) |
+| output (reference build, all plugins) | `061d85652ed1892a57ed37c4d0e6b4d85f348d73700ccd07879d60d6b5788d55` (also `python3 patch_op1.py --info`) |
 
 Install the result like any OP-1 update (bootloader update mode). The bootloader is not modified, so the
 original `op1_246.op1` can always be flashed back. **Use at your own risk.**
