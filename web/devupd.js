@@ -117,6 +117,8 @@ export async function push(dev, files, log) {
       else { const r = await L.ask(STAT, enc(p)); same = r.st === 0 && rd32(r.pl) === d.length; }
       if (!same) { keep.push([p, d]); log(`  differs: ${p}`); }
     }
+    const db = files.find(([p]) => p === 'content/op1_factory.db');   // engine / FX rows: often the same size
+    if (keep.some(([p]) => p === 'OP1_vdk.ldr') && db && !keep.includes(db)) { keep.push(db); log(`  with the firmware: ${db[0]}`); }
     log(`${keep.length} of ${files.length} files differ on the OP-1`);
     files = keep;
   }
