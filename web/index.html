@@ -73,7 +73,7 @@ function render() {
     c.type = 'checkbox'; c.checked = r.checked; c.onchange = () => { r.checked = c.checked; };
     const cell = (x, cls) => { const td = document.createElement('td'); td.textContent = x; if (cls) td.className = cls; tr.append(td); return td; };
     const l = document.createElement('td'); l.append(c); tr.append(l);
-    cell(r.name); cell(r.kind || '?', 'dim');
+    cell(r.name); cell(r.kind || '?', 'dim'); cell(r.author || '', 'dim');
     let st = '';
     if (installed) {
       const on = installed.find((i) => i.file === r.file);
@@ -84,15 +84,20 @@ function render() {
   }
 }
 const selected = () => [...rows.values()].filter((r) => r.checked);
-function pluginInfo(d) {                    // (name, kind) from a .op1p (trailer -> header), null if not a plugin file
+function pluginInfo(d) {                    // { name, kind, author } from a .op1p (trailer -> header -> metadata)
   if (d.length < 16 + 76) return null;
   const v = new DataView(d.buffer, d.byteOffset, d.length), at = d.length - 16;
   if (v.getUint32(at, true) !== 0x5431504F) return null;
-  const off = v.getUint32(at + 4, true);
-  if (off + 76 > d.length || v.getUint32(off, true) !== 0x5031504F) return null;
-  const nm = d.subarray(off + 16, off + 32);
-  return { name: new TextDecoder().decode(nm.subarray(0, nm.indexOf(0) < 0 ? 16 : nm.indexOf(0))),
-           kind: ['synth', 'fx'][v.getUint32(off + 12, true)] || '?' };
+  const off = v.getUint32(at + 4, true), len = v.getUint32(at + 8, true);
+  if (off + 76 > d.length || off + len > at || v.getUint32(off, true) !== 0x5031504F) return null;
+  const nm = d.subarray(off + 16, off + 32), str = (b) => new TextDecoder().decode(b);
+  const info = { name: str(nm.subarray(0, nm.indexOf(0) < 0 ? 16 : nm.indexOf(0))),
+                 kind: ['synth', 'fx'][v.getUint32(off + 12, true)] || '?', author: '' };
+  let p = off + 76 + v.getUint32(off + 32, true) + 16 * v.getUint32(off + 68, true);   // after image + relocations
+  for (let i = v.getUint32(off + 72, true); i > 0 && p < off + len; i--) { const z = d.indexOf(0, p); if (z < 0) return info; p = z + 1; }
+  for (const l of str(d.subarray(Math.min(p, off + len), off + len)).split('\n'))
+    if (l.startsWith('author=')) info.author = l.slice(7, 60);
+  return info;
 }
 async function sha256(d) { return [...new Uint8Array(await crypto.subtle.digest('SHA-256', d))].map((x) => x.toString(16).padStart(2, '0')).join(''); }
 async function pluginData(r) {              // bytes of a ticked plugin: own file, built image, or data/plugins/ (checked)
@@ -169,7 +174,7 @@ async function find(verbose) {
   if (dev.proto >= 3) {
     installed = await DU.list(dev);
     for (const i of installed) {
-      if (!rows.has(i.file)) addRow({ file: i.file, name: i.file.replace(/\.op1p$/, ''), kind: '', size: i.size, own: true, onlyDevice: true });
+      if (!rows.has(i.file)) addRow({ file: i.file, name: i.file.replace(/\.op1p$/, ''), kind: '', author: '', size: i.size, own: true, onlyDevice: true });
     }
     for (const r of rows.values()) r.checked = installed.some((i) => i.file === r.file);   // tick = on the OP-1
     render();

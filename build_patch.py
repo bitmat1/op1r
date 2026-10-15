@@ -64,13 +64,18 @@ def file_ops(name, a, b, blobdir):
 
 
 def plugin_info(data):
-    """(name, kind) from a .op1p file (trailer -> header, synth_sdk/plugload/op1p.h)"""
+    """(name, kind, metadata dict) from a .op1p file (trailer -> header; metadata after the import names, op1p.h)"""
     import struct
     tm, off, ln, _ = struct.unpack_from('<4I', data, len(data) - 16)
     assert tm == 0x5431504F, 'not a plugin file'
     mg, _, _, kind, name = struct.unpack_from('<4I16s', data, off)
     assert mg == 0x5031504F, 'not a plugin file'
-    return name.split(b'\0')[0].decode(), ('synth', 'fx')[kind]
+    image, n_rel, n_imp = struct.unpack_from('<I', data, off + 32)[0], *struct.unpack_from('<2I', data, off + 68)
+    p = off + 76 + image + 16 * n_rel
+    for _ in range(n_imp):
+        p = data.index(b'\0', p) + 1
+    meta = dict(l.split('=', 1) for l in data[p:off + ln].decode().splitlines() if '=' in l)
+    return name.split(b'\0')[0].decode(), ('synth', 'fx')[kind], meta
 
 
 def ldr_ident(ldr):
@@ -111,9 +116,10 @@ def main():
                 continue
             data = open(full, 'rb').read()
             if rel.startswith('plugins/'):                 # plugin files: our code + SVG, shipped whole, selectable
-                name, kind = plugin_info(data)
+                name, kind, meta = plugin_info(data)
                 shutil.copy(full, os.path.join(blobdir, 'plugins', fn))
-                plugins.append({'name': name, 'kind': kind, 'file': fn, 'size': len(data), 'sha256': P.sha256(data)})
+                plugins.append({'name': name, 'kind': kind, 'author': meta.get('author', ''), 'file': fn,
+                                'size': len(data), 'sha256': P.sha256(data)})
                 print(f'plugin  {rel} ({kind} {name})')
                 continue
             if rel in orig:

@@ -5,7 +5,7 @@ Newest first. Each entry lists the changes since the previous push and the outpu
 
 ## 2026-10-15 14:51 — op1r 34
 
-Output `1011abcd2f74f250cbe99c60f75390b6c9767c38b9aa54035e5345da5b218ac4` (all plugins)
+Output `49ce1f5977a0690f0dac42896d3c853c33023a0bf09b3a1bd70cfa58ab6df195` (all plugins)
 
 ### Added
 - **Synths and effects are plugin files** (`plugins/<name>.op1p`), loaded by the firmware at boot: supersaw, fmbell,
@@ -13,7 +13,8 @@ Output `1011abcd2f74f250cbe99c60f75390b6c9767c38b9aa54035e5345da5b218ac4` (all p
   still use them. Sounds find a plugin by name, so they also work after it was removed and installed again.
 - Web patcher: choose which synths / effects go into the firmware file; **Connect OP-1** (op1r 34 or newer) lists the
   installed ones and installs / removes them over USB MIDI without a firmware file. Own plugin files (`.op1p`) can be
-  added (only from people you trust).
+  added (only from people you trust). The list shows each plugin's author (`author` in `plugin.json`, stored in the
+  plugin file).
 - `patch_op1.py --plugins a,b|all|none` (replaces `--without`); `op1push.py --list` / `--delete` (op1r-src).
 - Safety: if a boot with plugins does not reach the UI, the next boot skips all plugins once.
 

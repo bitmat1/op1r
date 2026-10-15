@@ -686,87 +686,98 @@
   {
    "name": "aether",
    "kind": "synth",
+   "author": "pcppcp",
    "file": "aether.op1p",
-   "size": 7133,
-   "sha256": "d6dae1f21fa483656990ef9c36c332506f740525610fd37aceea8f5b185a978b"
+   "size": 7147,
+   "sha256": "8c04bce04ea3a946b6aa0c49bc5f0c506e30616e2bd4465c6438b5b25f9b41c2"
   },
   {
    "name": "arc",
    "kind": "synth",
+   "author": "ultralazr",
    "file": "arc.op1p",
-   "size": 14984,
-   "sha256": "6f16041d6ed5d4d2ccf0ac8f31aa264cda8924228c1e9f2c7d09dd8845c33284"
+   "size": 15001,
+   "sha256": "28363fb6f05ad8e5cabe803a58e3509368e13a46d0401120233d207189557084"
   },
   {
    "name": "fmbell",
    "kind": "synth",
+   "author": "pcppcp",
    "file": "fmbell.op1p",
-   "size": 5808,
-   "sha256": "f615ee8f0564d253c5655afec88e87f3299515d02f908f46ccfc1f610739a2bb"
+   "size": 5822,
+   "sha256": "f0e1e48abd821174528c7b1e62be2f030849775884f2ae5ac83f6439f0b9b959"
   },
   {
    "name": "granular",
    "kind": "synth",
+   "author": "pcppcp",
    "file": "granular.op1p",
-   "size": 7277,
-   "sha256": "5b5f249a043774367c9f463e8c40ef5aebeb1664b483e35283a2dae0442925a8"
+   "size": 7291,
+   "sha256": "7c18bb2ef1e4d383f7937136b9fc76bbf191a72bf424ea4e201ec3b4f4a95112"
   },
   {
    "name": "mixtur",
    "kind": "synth",
+   "author": "ultralazr",
    "file": "mixtur.op1p",
-   "size": 10932,
-   "sha256": "fad0af0e8d8becffa0c00787ad38eb615cac5272c784990439d3504bda3e6d7e"
+   "size": 10949,
+   "sha256": "4cfe2d7e003807e2ff7adad30c5a65755379819a2fe259bc7526ed4e7cfb5c0d"
   },
   {
    "name": "supersaw",
    "kind": "synth",
+   "author": "pcppcp",
    "file": "supersaw.op1p",
-   "size": 10420,
-   "sha256": "1fb9f8dfcfd64d0956804337a3b66c948445811fe8834cea24ffb600a981a40e"
+   "size": 10434,
+   "sha256": "bb64eb64ffe5fd5cb4facf0a53d5bcb4045c791cd4775646f59ef56b8aca70f9"
   },
   {
    "name": "clouds",
    "kind": "fx",
+   "author": "pcppcp",
    "file": "clouds.op1p",
-   "size": 47507,
-   "sha256": "ea540b7043323411d67842f3d3b19afba11251793f8ebec8f481895fdde842b1"
+   "size": 47521,
+   "sha256": "ba8872cf5843b5fb15411e78e5191e8f8da7abad78c4a5b226fe9eaa2abe6209"
   },
   {
    "name": "in a room",
    "kind": "fx",
+   "author": "ultralazr",
    "file": "in_a_room.op1p",
-   "size": 20443,
-   "sha256": "9be2ae16f1fb0697b72404c4686a4032cb8971f1b60ef7ee110e92b17b9b7ca7"
+   "size": 20460,
+   "sha256": "09c09b41c438c9594238cf0f42d5c8c376cdfba5b95ff525e3c757cbc21ff83d"
   },
   {
    "name": "palme",
    "kind": "fx",
+   "author": "ultralazr",
    "file": "palme.op1p",
-   "size": 15556,
-   "sha256": "bd4390473bf2b6a5a729e100d4adcbeec01286186a345876a09d40dd4a22eb1e"
+   "size": 15573,
+   "sha256": "0c42a9053b19a8df2f683474c989c88378634403c50736f1cd32017479a631ff"
   },
   {
    "name": "reverb",
    "kind": "fx",
+   "author": "pcppcp",
    "file": "reverb.op1p",
-   "size": 80899,
-   "sha256": "642c9f1cfc83027e95bf7d721241860a432870bc0e00fd6edada401bdc94b594"
+   "size": 80913,
+   "sha256": "4a6bda1779382201a4211ed7174d9ba6ef79307bedc479b42161a3a781870aa4"
   },
   {
    "name": "tape",
    "kind": "fx",
+   "author": "pcppcp",
    "file": "tape.op1p",
-   "size": 10867,
-   "sha256": "96839afde0c0ea48ad6ac256f2e99624be7867e1a1f72810d35960b8b18b950f"
+   "size": 10881,
+   "sha256": "34a1e870fec201d5350a7e2fe8d6becac127c548292af927dedbc7a77a9d859e"
   }
  ],
  "plugin_dir_template": "content",
  "plugin_file_template": "content/op1_factory.db",
  "result": {
-  "tar_sha256": "9da029e30d6085b93aba4e990c38e080a5293e2d70d19d11392bdd402f0bc43b",
-  "sha256": "1011abcd2f74f250cbe99c60f75390b6c9767c38b9aa54035e5345da5b218ac4",
-  "size": 12927188,
+  "tar_sha256": "e2da61ab7e5e57698010c1c30441d5567523890bc2c0f66fee79c0d9df15c47f",
+  "sha256": "49ce1f5977a0690f0dac42896d3c853c33023a0bf09b3a1bd70cfa58ab6df195",
+  "size": 12927239,
   "ident": "op1r 34"
  }
 }
