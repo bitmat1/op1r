@@ -73,7 +73,8 @@ function render() {
     c.type = 'checkbox'; c.checked = r.checked; c.onchange = () => { r.checked = c.checked; };
     const cell = (x, cls) => { const td = document.createElement('td'); td.textContent = x; if (cls) td.className = cls; tr.append(td); return td; };
     const l = document.createElement('td'); l.append(c); tr.append(l);
-    cell(r.name); cell(r.kind || '?', 'dim'); cell(r.author || '', 'dim');
+    cell(r.name); cell(r.author ? `(${r.author})` : '', 'dim'); cell(r.kind || '?', 'dim');
+    cell(r.size === undefined ? '' : `${(r.size / 1024).toFixed(1)} KB`, 'dim');
     let st = '';
     if (installed) {
       const on = installed.find((i) => i.file === r.file);
