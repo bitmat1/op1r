@@ -40,14 +40,19 @@ files that differ, without the bootloader. The OP-1 then asks: <b>T1</b> restart
 import * as DU from './devupd.js';
 const $ = (id) => document.getElementById(id);
 const log = (t, cls) => { const s = document.createElement('span'); if (cls) s.className = cls; s.textContent = t + '\n'; $('log').append(s); };
-let busy = false, files = null, dev = null, midi = null;
+let busy = false, files = null, dev = null, midi = null, detecting = false;
 async function detect() {                            // op1r with SysEx update on USB MIDI? -> show the button
-  if (!files || !navigator.requestMIDIAccess) return;
+  if (!files || !navigator.requestMIDIAccess || detecting) return;
+  detecting = true;
+  try { await detect1(); } finally { detecting = false; }
+}
+async function detect1() {                           // (one at a time: port 'open' events fire statechange)
   try { midi = midi || await navigator.requestMIDIAccess({ sysex: true }); } catch { return; }   // denied / unsupported
   midi.onstatechange = () => { if (!dev && !busy) detect(); };
   if (dev) return;
-  dev = await DU.find(midi);
-  if (!dev) return;
+  const d = await DU.find(midi);
+  if (!d) return;
+  dev = d;
   $('sx').style.display = 'inline-block'; $('sxinfo').hidden = false;
   log(`OP-1 found on USB MIDI: ${dev.ident || 'op1r (SysEx update protocol ' + dev.proto + ')'}`, 'ok');
   const ldr = files.find(([p]) => p === 'OP1_vdk.ldr'), mine = ldr && DU.ldrIdent(ldr[1]);

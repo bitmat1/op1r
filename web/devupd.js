@@ -59,7 +59,10 @@ export function crc32(d) {
 class Link {                                        // one MIDI output + input pair
   constructor(out, inp) {
     this.out = out; this.inp = inp; this.seq = 0; this.q = []; this.wait = null;
-    inp.onmidimessage = (e) => { const r = parseReply(e.data); if (r) { this.q.push(r); if (this.wait) this.wait(); } };
+    this.attach();
+  }
+  attach() {                                        // (re)take the input: only one handler per port
+    this.inp.onmidimessage = (e) => { const r = parseReply(e.data); if (r) { this.q.push(r); if (this.wait) this.wait(); } };
   }
   close() { this.inp.onmidimessage = null; }
   send(cmd, pl) { this.seq = (this.seq + 1) & 0x3FFF; this.out.send(build(cmd, this.seq, pl)); return this.seq; }
@@ -101,6 +104,8 @@ export async function find(midi) {
 // LDR). log(text). Resolves when the OP-1 confirmed (it then restarts and applies), rejects on refusal / cancel.
 export async function push(dev, files, log) {
   const L = dev.link;
+  L.attach(); L.q = [];
+  log('asking the OP-1 which files it has ...');
   files = files.filter(([p]) => pathOk(p));
   if (dev.proto >= 2) {
     const keep = [];
@@ -108,7 +113,7 @@ export async function push(dev, files, log) {
       let same;
       if (p === 'OP1_vdk.ldr') same = ldrIdent(d) === dev.ident;
       else { const r = await L.ask(STAT, enc(p)); same = r.st === 0 && rd32(r.pl) === d.length; }
-      if (!same) keep.push([p, d]);
+      if (!same) { keep.push([p, d]); log(`  differs: ${p}`); }
     }
     log(`${keep.length} of ${files.length} files differ on the OP-1`);
     files = keep;
