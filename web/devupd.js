@@ -40,6 +40,8 @@ export function pathOk(p) {
     !/te-boot|te_boot|teboot/.test(low) && !p.includes('..') && !p.includes('//') &&
     (p === 'OP1_vdk.ldr' || p.startsWith('content/'));
 }
+// the user's sampler slots, settings / patches and tape clips: never sent
+export const userData = (p) => /^content\/(audio\/(drum|synth)\/|op1\.db$|tape\.db$)/.test(p);
 // boot text in an OP1_vdk.ldr ("op1r <n> [build time]"), null if none (as op1push.ldr_ident)
 export function ldrIdent(data) {
   const s = new TextDecoder('latin1').decode(data);
@@ -106,7 +108,7 @@ export async function push(dev, files, log) {
   const L = dev.link;
   L.attach(); L.q = [];
   log('asking the OP-1 which files it has ...');
-  files = files.filter(([p]) => pathOk(p));
+  files = files.filter(([p]) => pathOk(p) && !userData(p));
   if (dev.proto >= 2) {
     const keep = [];
     for (const [p, d] of files) {
