@@ -13,6 +13,7 @@ Output `061d85652ed1892a57ed37c4d0e6b4d85f348d73700ccd07879d60d6b5788d55` (all p
   sequencers, USB MIDI channel) and output (instrument, stock sequencer, USB MIDI channel); REC held / latched
   recording of notes and CCs; scissors selection, lift (Shift: all tracks, playhead jumps to the first note), drop.
   One song file; while off, SEQ + TAPE is stock and the sequencer does no work.
+  Idea by **ultralazr**, thanks!
 - **MIDI CC synth automation** of the current synth slot (absolute, stored in the sound like a knob turn): CC 53–56
   engine knobs, 57–60 envelope, 72–75 FX knobs, 76–79 LFO knobs. Recorded CCs in the sequencer play back into them.
 
