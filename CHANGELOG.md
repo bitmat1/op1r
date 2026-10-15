@@ -3,6 +3,23 @@
 Newest first. Each entry lists the changes since the previous push and the output checksum of
 `patch_op1.py` for that version. The input is always the original R246 image.
 
+## 2026-10-15 11:15 — op1r 33
+
+Output `64c7f9ddd96ed5a5111fe6caa289734a65af8819294aaf0c947ef3dcf0ecc1a0`
+
+### Added
+- Synth engine **aether**: a tilt theremin using the OP-1's motion sensor. The key sets the note; tilting forward /
+  back bends the pitch, raising the right side fades the volume, shaking adds vibrato. Blue pitch range (1–24
+  semitones), green timbre, white vibrato, red volume tilt; presses: dead zone, tilt for the full range, vibrato
+  rate (a dot under the bar). Mono / legato / portamento: the stock play modes.
+
+### Fixed
+- SysEx update (web and `op1push.py`): your sampler slots, settings and tape (`drum_N.raw`, `synth_N.raw`,
+  `op1.db`, `tape.db`) are never sent; the synth / FX list (`op1_factory.db`) is always sent with a new firmware.
+
+### Changed
+- Boot screen version: `op1r 33`.
+
 ## 2026-10-15 09:30 — op1r 32
 
 Output `87ad2ccb3b65cc41cde2f1aff6d841bb30555bfdf36c081d887c9d0ca8c4a215`

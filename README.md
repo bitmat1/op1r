@@ -117,6 +117,9 @@ with:
 - more synth engines: **mixtur** (subharmonic organ after Oskar Sala's Mixtur-Trautonium), **arc** (Duddell's
   singing arc); more FX: **palme** (Ondes Martenot Palme / Métallique diffuseur), **in a room** (Alvin Lucier's
   *I am sitting in a room* as a looping FX)
+- **aether**: a tilt theremin. The key sets the note; tilting the OP-1 forward / back bends the pitch, raising the
+  right side fades the volume out, shaking adds vibrato (the angle at the key press is "home"). Blue pitch range,
+  green timbre, white vibrato, red volume tilt; presses: dead zone, tilt for the full range, vibrato rate
 - **oracle** (geomantic shield chart as a 16-step chord / drum pattern) and **peal** (English change ringing)
   sequencers, for synth and drums
 - **MIDI sync** (tempo sync = MIDI in): on MIDI START the stock pattern sequencer, dots and euclid restart so their
@@ -184,7 +187,7 @@ version. The firmware content is still verified identical, and `--accept-recompr
 | | SHA-256 |
 |---|---|
 | input `op1_246.op1` (original R246) | `c5315218f825f143b415ca554516541898abee843d3a236df0b54c04e1fb13a9` |
-| output (reference build) | `87ad2ccb3b65cc41cde2f1aff6d841bb30555bfdf36c081d887c9d0ca8c4a215` (also `python3 patch_op1.py --info`) |
+| output (reference build) | `64c7f9ddd96ed5a5111fe6caa289734a65af8819294aaf0c947ef3dcf0ecc1a0` (also `python3 patch_op1.py --info`) |
 
 Install the result like any OP-1 update (bootloader update mode). The bootloader is not modified, so the
 original `op1_246.op1` can always be flashed back. **Use at your own risk.**
