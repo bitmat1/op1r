@@ -802,6 +802,132 @@
    "file": "peal.op1p",
    "size": 14581,
    "sha256": "b5e3c64534ee6c3c16b419ca0fe60032ab908bc336cff7f694e1987cf6b9f793"
+  },
+  {
+   "name": "lofi",
+   "kind": "synth",
+   "author": "op1-sdk port",
+   "file": "lofi.op1p",
+   "size": 11701,
+   "sha256": "ab1f261ece0fdf337c81fbc2fdf7274d81ecc886d6e779f755100098248eea7a",
+   "extra": true
+  },
+  {
+   "name": "wheel",
+   "kind": "synth",
+   "author": "op1-sdk port",
+   "file": "wheel.op1p",
+   "size": 9417,
+   "sha256": "d8ead608aeb2902a840d4a7df6bc96589e0af44eb5437c7b13564c197af4295c",
+   "extra": true
+  },
+  {
+   "name": "warp",
+   "kind": "synth",
+   "author": "op1-sdk port",
+   "file": "warp.op1p",
+   "size": 17797,
+   "sha256": "ec8eca2a7725cbd8153f04aba716e47c9f160fc8386787cb6e37032cbbddfbd0",
+   "extra": true
+  },
+  {
+   "name": "trio",
+   "kind": "synth",
+   "author": "op1-sdk port",
+   "file": "trio.op1p",
+   "size": 11665,
+   "sha256": "c72b9579a831008db648699c113589a09854054869c9b043cc5f402cad2ff9e8",
+   "extra": true
+  },
+  {
+   "name": "reso",
+   "kind": "fx",
+   "author": "op1-sdk port",
+   "file": "reso.op1p",
+   "size": 10525,
+   "sha256": "64d92445c71aa2dd818f6857f4b37172b2b1fa39753bde863886aa4c62e031af",
+   "extra": true
+  },
+  {
+   "name": "shimmer",
+   "kind": "fx",
+   "author": "op1-sdk port",
+   "file": "shimmer.op1p",
+   "size": 8597,
+   "sha256": "0c9560d271132c12331d89ac3a007412a9f73a71410776eb173c0c7bcf28bd63",
+   "extra": true
+  },
+  {
+   "name": "phaser",
+   "kind": "fx",
+   "author": "op1-sdk port",
+   "file": "phaser.op1p",
+   "size": 19029,
+   "sha256": "70ca6493396a9d1843966c166d8105bcc1d975c7e73beef242b4bf5800272d76",
+   "extra": true
+  },
+  {
+   "name": "flanger",
+   "kind": "fx",
+   "author": "op1-sdk port",
+   "file": "flanger.op1p",
+   "size": 19109,
+   "sha256": "630d51d6298674c5446c0b046b1f552e3f494a437a6980c660ab3322e06ccb5c",
+   "extra": true
+  },
+  {
+   "name": "fold",
+   "kind": "fx",
+   "author": "op1-sdk port",
+   "file": "fold.op1p",
+   "size": 19105,
+   "sha256": "b693a78307efa5b70a767c74f938dcc17726574b210af885caeca7c8dc2e0e3c",
+   "extra": true
+  },
+  {
+   "name": "fuzz",
+   "kind": "fx",
+   "author": "op1-sdk port",
+   "file": "fuzz.op1p",
+   "size": 19097,
+   "sha256": "5c8fe96d6d77d54293077a00dc216ccc85bcfd7c4791968b1ce24ccbbed1543c",
+   "extra": true
+  },
+  {
+   "name": "dj filter",
+   "kind": "fx",
+   "author": "op1-sdk port",
+   "file": "dj_filter.op1p",
+   "size": 19273,
+   "sha256": "36d7145e027206a0a13ca3b7e04c4ed1078a761c1f62477bf29356b59213e8d7",
+   "extra": true
+  },
+  {
+   "name": "transient",
+   "kind": "fx",
+   "author": "op1-sdk port",
+   "file": "transient.op1p",
+   "size": 19101,
+   "sha256": "69105df536cdf17da9d11900453ccbbb36c50d6a6c86653588b70dc5171f5e91",
+   "extra": true
+  },
+  {
+   "name": "texture",
+   "kind": "fx",
+   "author": "op1-sdk port",
+   "file": "texture.op1p",
+   "size": 19037,
+   "sha256": "f74a18e635f3993c220b0127b044c930fe13268b111758da06e8a69667c08227",
+   "extra": true
+  },
+  {
+   "name": "dice",
+   "kind": "seq",
+   "author": "sdkports",
+   "file": "dice.op1p",
+   "size": 14378,
+   "sha256": "acd0a49908eb9d808ce78b3f5e2c49e33925f153f2e11bb3543fde2a1d1fa101",
+   "extra": true
   }
  ],
  "plugin_dir_template": "content",

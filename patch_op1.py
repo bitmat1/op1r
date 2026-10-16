@@ -122,6 +122,11 @@ def plugin_members(members, man, names, log=print):
     return out
 
 
+def reference_plugins(man):
+    """plugins of the reference build: op1r's own (entries marked "extra" were added locally, add_plugins.py)"""
+    return [p['name'] for p in man.get('plugins', []) if not p.get('extra')]
+
+
 def patch(op1, man, log=print, verify=True, plugins=None):
     """original .op1 bytes -> (patched .op1 bytes, tar bytes); verify=False only for build_patch.py.
     plugins: names of the plugin files to include (None: all = the reference build)"""
@@ -159,8 +164,8 @@ def patch(op1, man, log=print, verify=True, plugins=None):
 
     every = [p['name'] for p in man.get('plugins', [])]
     plugins = every if plugins is None else list(plugins)
-    if verify:                                                  # the reference: firmware + every plugin file
-        ref = pack_tar(members + plugin_members(members, man, every, log=lambda t: None))
+    if verify:                                                  # the reference: firmware + every op1r plugin file
+        ref = pack_tar(members + plugin_members(members, man, reference_plugins(man), log=lambda t: None))
         if sha256(ref) != man['result']['tar_sha256']:
             fail('the repacked archive does not match the reference')
     members = members + plugin_members(members, man, plugins, log)
@@ -214,7 +219,7 @@ def main():
     out, _ = patch(op1, man, plugins=sel)
     dst = a.output or os.path.splitext(a.firmware)[0] + '-custom.op1'
     h = sha256(out)
-    if sorted(sel) != sorted(every):
+    if sorted(sel) != sorted(reference_plugins(man)):
         open(dst, 'wb').write(out)
         print(f'\nOK: {dst}\n  sha256 {h}\n  firmware verified against the reference build; plugins: '
               + (', '.join(sel) or 'none'))

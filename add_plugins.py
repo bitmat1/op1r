@@ -9,8 +9,13 @@ plugins/<name>.op1p next to op1r's own plugin files, with their tar metadata; a 
 Everything else stays byte for byte as it is (checked after repacking). Install the result like any OP-1 update
 (bootloader update mode). Plugins already on the OP-1 that are not in the file are kept.
 Only install plugin files from people you trust: a plugin is program code with full access to the OP-1.
+
+    python3 add_plugins.py --to-patcher build/plugins/lofi.op1p ...
+
+copies the files into data/plugins/ and lists them in data/manifest.json (marked "extra"): the web patcher then shows
+them before an OP-1 is connected, like op1r's own, and can put them into the firmware file it builds.
 """
-import argparse, copy, hashlib, os, struct
+import argparse, copy, hashlib, json, os, struct, sys
 import patch_op1 as P
 
 OP1P_TMAGIC = 0x5431504F                          # "OP1T": last 16 bytes of a plugin file (op1p.h)
@@ -25,7 +30,52 @@ def check_plugin(path, data):
     return 'plugins/' + name
 
 
+def plugin_info(data):
+    """(name, kind, author) from a plugin file's header and metadata (as the web patcher's pluginInfo)"""
+    bo, bl = struct.unpack('<II', data[-12:-4])
+    h = data[bo:bo + 76]
+    kind = ('synth', 'fx', 'seq')[struct.unpack('<I', h[12:16])[0]]
+    name = h[16:32].split(b'\0')[0].decode()
+    img, nrel, nimp = struct.unpack('<I', h[32:36])[0], *struct.unpack('<II', h[68:76])
+    p = bo + 76 + img + 16 * nrel
+    for _ in range(nimp):
+        p = data.index(b'\0', p) + 1
+    meta = data[p:bo + bl].decode('utf-8', 'replace')
+    author = next((l[7:] for l in meta.split('\n') if l.startswith('author=')), '')
+    return name, kind, author
+
+
+def to_patcher(paths):
+    """copy plugin files into data/plugins/ and list them in data/manifest.json as "extra" (the web patcher shows
+    them before an OP-1 is connected and can put them into the firmware file; patch_op1.py --plugins too)"""
+    here = os.path.dirname(os.path.abspath(__file__))
+    mp = os.path.join(here, 'data', 'manifest.json')
+    man = json.load(open(mp))
+    for f in paths:
+        data = open(f, 'rb').read()
+        fname = os.path.basename(f)
+        check_plugin(f, data)
+        name, kind, author = plugin_info(data)
+        old = next((p for p in man['plugins'] if p['name'] == name), None)
+        if old and not old.get('extra'):
+            P.fail(f'{name}: an op1r plugin of that name is already in the patcher (not replaced)')
+        e = {'name': name, 'kind': kind, 'author': author, 'file': fname, 'size': len(data),
+             'sha256': hashlib.sha256(data).hexdigest(), 'extra': True}
+        if old:
+            man['plugins'][man['plugins'].index(old)] = e
+        else:
+            man['plugins'].append(e)
+        open(os.path.join(here, 'data', 'plugins', fname), 'wb').write(data)
+        print(f'  {"updated" if old else "added  "} {kind:5s} {name} ({fname}, {len(data)} B)')
+    json.dump(man, open(mp, 'w'), indent=1)
+    open(mp, 'a').write('\n')
+
+
 def main():
+    if len(sys.argv) > 1 and sys.argv[1] == '--to-patcher':
+        if len(sys.argv) < 3:
+            P.fail('usage: add_plugins.py --to-patcher file.op1p ...')
+        return to_patcher(sys.argv[2:])
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('firmware'); ap.add_argument('out'); ap.add_argument('plugins', nargs='+')
     a = ap.parse_args()
