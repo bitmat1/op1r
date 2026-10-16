@@ -3,9 +3,9 @@
 Newest first. Each entry lists the changes since the previous push and the output checksum of
 `patch_op1.py` for that version. The input is always the original R246 image.
 
-## 2026-10-16 02:30 — op1r 35
+## 2026-10-16 12:00 — op1r 35
 
-Output `22f22ebdc5a29e8bc525fca5278e0fdc16baef70e6cb686f8cac190d81691ba4` (all plugins)
+Output `478934c300c14f0941c4eaeecc9caad33e5e4b8938ff90450edb69d0b448da8b` (all plugins)
 
 ### Added
 - **MIDI sequencer** (opt-in on clock + T2, green **MIDI SEQ**, off by default): SEQ + TAPE opens a 4-track MIDI
@@ -24,6 +24,11 @@ Output `22f22ebdc5a29e8bc525fca5278e0fdc16baef70e6cb686f8cac190d81691ba4` (all p
   on tracks with output I (output S ignores CCs, output M sends them out).
 
 ### Fixed
+- A sound with a missing effect or an LFO the OP-1 doesn't know stopped it at start-up ("Invalid synth patch …
+  error 22 / 25"); such a sound now loads with the filter / tremolo, switched off.
+- drum+: switching a pad back to gate saved a value the OP-1's own check rejects, so the kit stopped the OP-1 at the
+  next start ("Invalid drum patch … error 12"). Gate is now saved with a value it accepts, and kits saved with the bug
+  load again, still on gate.
 - MIDI recorder: after switching from the recorder to the sequencer page the white encoder and REC kept going to
   the recorder.
 - MIDI recorder: with the loop on, the loop start stays in memory (no reload at the wrap).
