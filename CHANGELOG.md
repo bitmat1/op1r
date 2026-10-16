@@ -3,9 +3,9 @@
 Newest first. Each entry lists the changes since the previous push and the output checksum of
 `patch_op1.py` for that version. The input is always the original R246 image.
 
-## 2026-10-16 02:00 — op1r 35
+## 2026-10-16 02:30 — op1r 35
 
-Output `09bdccae71403d6ffe98e19b78f9e7b81455b51ec47702d28d269cbb82115903` (all plugins)
+Output `22f22ebdc5a29e8bc525fca5278e0fdc16baef70e6cb686f8cac190d81691ba4` (all plugins)
 
 ### Added
 - **MIDI sequencer** (opt-in on clock + T2, green **MIDI SEQ**, off by default): SEQ + TAPE opens a 4-track MIDI
@@ -20,7 +20,8 @@ Output `09bdccae71403d6ffe98e19b78f9e7b81455b51ec47702d28d269cbb82115903` (all p
   installed / removed without a firmware update). A sound whose sequencer plugin is missing loads with the pattern
   sequencer instead of stopping the OP-1.
 - **MIDI CC synth automation** of the current synth slot (absolute, stored in the sound like a knob turn): CC 53–56
-  engine knobs, 57–60 envelope, 72–75 FX knobs, 76–79 LFO knobs. Recorded CCs in the sequencer play back into them.
+  engine knobs, 57–60 envelope, 72–75 FX knobs, 76–79 LFO knobs. Recorded CCs in the MIDI recorder play back into them
+  on tracks with output I (output S ignores CCs, output M sends them out).
 
 ### Fixed
 - MIDI recorder: after switching from the recorder to the sequencer page the white encoder and REC kept going to
