@@ -100,7 +100,9 @@ with:
     engine knobs, 57–60 envelope A/D/S/R, 72–75 FX knobs (when the FX is on), 76–79 LFO knobs (when the LFO is on)
 - **MIDI sequencer** (opt-in: clock screen + **T2**, green knob **MIDI SEQ ON**): **SEQ + TAPE** opens a 4-track MIDI
   recorder that runs with the tape (same position, play / stop, loop, markers). **T1–T4** select the track
-  (Shift: mute), hold **REC** to record the selected track (Shift + REC latched), **white press** switches between
+  (Shift: mute), hold **REC** to record the selected track (Shift + REC latched); from stop, REC held or Shift + REC
+  waits for the first note, which starts the tape (recording then stays on until STOP), and **REC held + metronome**
+  counts in (4 / 8 / 16 beats, settings page) before it starts. **White press** switches between
   the track's input and output, **white turn** chooses I (keyboard), S (stock sequencers / arpeggio), M1–M16 (USB
   MIDI channel) as input and I (instrument), S (stock sequencer), M1–M16 (USB MIDI out) as output. **Scissors** sets
   the selection start / end, **lift** cuts it from the track (Shift + lift: all tracks) and moves the playhead to the
@@ -138,8 +140,10 @@ with:
   from the host (any MIDI tool that can send SysEx; `F0 00 20 76 00 01 00 F7` switches it off)
 - **firmware update over USB MIDI SysEx**: `tools/op1push.py` (op1r-src) or the web patcher stage changed files
   while the OP-1 runs; the OP-1 then asks (T1 restart and apply, T2 cancel). te-boot is never written
-- **synths and effects as plugin files**: loaded at boot from `plugins/`, installed / removed one by one (web
-  patcher or `op1push.py`) without a firmware update; a plugin that locks the OP-1 at boot is skipped on the next boot
+- **synths, effects and sequencers as plugin files**: loaded at boot from `plugins/`, installed / removed one by one
+  (web patcher or `op1push.py`) without a firmware update; a plugin that locks the OP-1 at boot is skipped on the next
+  boot. Euclid, dots, oracle and peal are sequencer plugins: without the file a sound that uses one loads with the
+  pattern sequencer, and its saved data comes back when the plugin is installed again
 
 ## Screens
 
@@ -206,7 +210,7 @@ version. The firmware content is still verified identical, and `--accept-recompr
 | | SHA-256 |
 |---|---|
 | input `op1_246.op1` (original R246) | `c5315218f825f143b415ca554516541898abee843d3a236df0b54c04e1fb13a9` |
-| output (reference build, all plugins) | `a4bc41410733eabee075a80de2f8dbbbd4442b539b032f2a30767765d579489f` (also `python3 patch_op1.py --info`) |
+| output (reference build, all plugins) | `bb478e12703b7127bae5617f0bd5923e0a2d6c557863564fd9930c929a890082` (also `python3 patch_op1.py --info`) |
 
 Install the result like any OP-1 update (bootloader update mode). The bootloader is not modified, so the
 original `op1_246.op1` can always be flashed back. **Use at your own risk.**

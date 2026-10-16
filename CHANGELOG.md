@@ -3,9 +3,9 @@
 Newest first. Each entry lists the changes since the previous push and the output checksum of
 `patch_op1.py` for that version. The input is always the original R246 image.
 
-## 2026-10-15 21:45 — op1r 35
+## 2026-10-16 01:00 — op1r 35
 
-Output `a4bc41410733eabee075a80de2f8dbbbd4442b539b032f2a30767765d579489f` (all plugins)
+Output `bb478e12703b7127bae5617f0bd5923e0a2d6c557863564fd9930c929a890082` (all plugins)
 
 ### Added
 - **MIDI sequencer** (opt-in on clock + T2, green **MIDI SEQ**, off by default): SEQ + TAPE opens a 4-track MIDI
@@ -13,11 +13,19 @@ Output `a4bc41410733eabee075a80de2f8dbbbd4442b539b032f2a30767765d579489f` (all p
   sequencers, USB MIDI channel) and output (instrument, stock sequencer, USB MIDI channel); REC held / latched
   recording of notes and CCs; scissors selection, lift (Shift: all tracks, playhead jumps to the first note), drop.
   One song file; while off, SEQ + TAPE is stock and the sequencer does no work.
-  Idea by **ultralazr**, thanks!
+  From stop, REC held or Shift + REC waits for the first note, which starts the tape (recording stays on until
+  STOP); REC held + metronome counts in first. Idea by **ultralazr**, thanks!
+- **Sequencers as plugin files**: euclid, dots, oracle and peal are plugins now (selectable in the web patcher,
+  installed / removed without a firmware update). A sound whose sequencer plugin is missing loads with the pattern
+  sequencer instead of stopping the OP-1.
 - **MIDI CC synth automation** of the current synth slot (absolute, stored in the sound like a knob turn): CC 53–56
   engine knobs, 57–60 envelope, 72–75 FX knobs, 76–79 LFO knobs. Recorded CCs in the sequencer play back into them.
 
 ### Fixed
+- MIDI recorder: after switching from the recorder to the sequencer page the white encoder and REC kept going to
+  the recorder.
+- MIDI recorder: with the loop on, the loop start stays in memory (no reload at the wrap).
+- MIDI recorder: the loop start marker stays visible when the loop is off (as on the tape screen).
 - **"Bad" storage growing** in the FILE box: while recording, the tape save wrote audio that was still changing,
   YAFFS's read-back check then failed and retired a good flash block. Saves now go through a copy, so no more good
   blocks are marked bad (blocks already marked stay bad).
