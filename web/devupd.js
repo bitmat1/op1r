@@ -50,6 +50,7 @@ export function ldrIdent(data) {
   const m = s.match(/\n{17} *(op1r [ -~]*)/);
   return m ? m[1] : null;
 }
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const u32 = (v) => { const b = new Uint8Array(4); new DataView(b.buffer).setUint32(0, v, true); return b; };
 const rd32 = (b) => new DataView(b.buffer, b.byteOffset, 4).getUint32(0, true);
 const cat = (...a) => { const o = new Uint8Array(a.reduce((n, x) => n + x.length, 0)); let k = 0; for (const x of a) { o.set(x, k); k += x.length; } return o; };
@@ -60,16 +61,42 @@ export function crc32(d) {
   return ~c >>> 0;
 }
 
+// debugging: trace.fn(text) gets every MIDI message sent and received (time, direction, command, size, bytes)
+export const trace = { fn: null, t0: 0 };
+const NAMES = { 1: 'HELLO', 2: 'BEGIN', 3: 'DATA', 4: 'END', 5: 'COMMIT', 6: 'ABORT', 7: 'STAT', 8: 'IDENT', 9: 'DELETE', 10: 'LIST' };
+const hex = (b, n = 24) => [...b.subarray(0, n)].map((x) => x.toString(16).padStart(2, '0')).join(' ') + (b.length > n ? ' ..' : '');
+function tr(dir, m, note = '') {
+  if (!trace.fn) return;
+  const t = ((performance.now() - trace.t0) / 1000).toFixed(3);
+  let what = 'other MIDI';
+  if (m.length > 7 && HDR.every((x, i) => m[i] === x)) {
+    const r = parseReply(m);
+    what = r ? `${NAMES[r.cmd] || r.cmd} reply seq ${r.seq}: ${ST[r.st] || r.st}`
+             : `${NAMES[m[5]] || m[5]} seq ${m[6] | m[7] << 7}`;
+  }
+  trace.fn(`${t} ${dir} ${what}, ${m.length} B${m[m.length - 1] === 0xF7 || m[0] !== 0xF0 ? '' : ' (no F7!)'}${note}  [${hex(m)}]`);
+}
+
 class Link {                                        // one MIDI output + input pair
   constructor(out, inp) {
     this.out = out; this.inp = inp; this.seq = 0; this.q = []; this.wait = null;
     this.attach();
   }
   attach() {                                        // (re)take the input: only one handler per port
-    this.inp.onmidimessage = (e) => { const r = parseReply(e.data); if (r) { this.q.push(r); if (this.wait) this.wait(); } };
+    this.inp.onmidimessage = (e) => {
+      const r = parseReply(e.data);
+      tr('<-', e.data);
+      if (r) { this.q.push(r); if (this.wait) this.wait(); }
+    };
   }
   close() { this.inp.onmidimessage = null; }
-  send(cmd, pl) { this.seq = (this.seq + 1) & 0x3FFF; this.out.send(build(cmd, this.seq, pl)); return this.seq; }
+  send(cmd, pl, when) {
+    this.seq = (this.seq + 1) & 0x3FFF;
+    const m = build(cmd, this.seq, pl);
+    tr('->', m);
+    if (when) this.out.send(m, when); else this.out.send(m);
+    return this.seq;
+  }
   recv(ms) {
     if (this.q.length) return Promise.resolve(this.q.shift());
     return new Promise((res) => {
@@ -119,8 +146,23 @@ export async function list(dev) {
 
 // files: [[path, Uint8Array]]; only those that differ on the device are sent (protocol 2: STAT sizes, IDENT for the
 // LDR). log(text). Resolves when the OP-1 confirmed (it then restarts and applies), rejects on refusal / cancel.
-export async function push(dev, files, log, deletes = []) {   // deletes: plugin paths (protocol 3)
-  const L = dev.link;
+// DATA without an answer: resent one message at a time, then in ever smaller messages (192 -> 96 -> 48 -> 24 data
+// bytes: on some hosts the long DATA messages never reach the OP-1 while the short commands do); the size that works
+// is kept for the rest of the connection (dev.win, dev.chunk). After MAX_STALLS timeouts in a row at the smallest
+// size without progress: rejected.
+const MAX_STALLS = 8, MIN_DATA = 24;
+// Start settings. Measured 2026-10-16 (op1r 35, macOS Chrome, debug probe): DATA messages up to 87 bytes on the wire
+// (64 data bytes) are answered; a 105-byte one is never answered and the OP-1's update handling stops (no answer to
+// anything until it restarts). So: 48 data bytes (69 bytes on the wire), one at a time. op1r's own default was 192 / 8.
+export const DEFAULTS = { chunk: 48, win: 1 };
+// opts: timeout (ms per answer), chunk (data bytes per DATA message, 1..192), win (messages in flight), gap (ms
+// between DATA messages: paces them, one at a time). Without chunk / win the sizes adapt as described above.
+export async function push(dev, files, log, deletes = [], opts = {}) {   // deletes: plugin paths (protocol 3)
+  const L = dev.link, tmo = opts.timeout || TIMEOUT, gap = opts.gap || 0, fixed = !!(opts.chunk || opts.win);
+  if (opts.chunk) dev.chunk = Math.max(1, Math.min(MAX_DATA, opts.chunk));
+  if (opts.win) dev.win = Math.max(1, Math.min(WINDOW, opts.win));
+  if (gap) dev.win = 1;
+  if (fixed || gap) log(`sending ${dev.chunk || DEFAULTS.chunk}-byte data messages, ${dev.win || DEFAULTS.win} at a time` + (gap ? `, ${gap} ms apart` : ''));
   L.attach(); L.q = [];
   log('asking the OP-1 which files it has ...');
   files = files.filter(([p]) => pathOk(p) && !userData(p));
@@ -146,19 +188,37 @@ export async function push(dev, files, log, deletes = []) {   // deletes: plugin
   for (const [p, d] of files) {
     const b = await L.ask(BEGIN, cat(u32(d.length), u32(crc32(d)), enc(p)));
     if (b.st) throw new Error(`${p}: refused (${ST[b.st] || b.st})`);
-    let acked = 0, nxt = 0, inflight = new Map(), last = 0;
+    let acked = 0, nxt = 0, inflight = new Map(), last = 0, stalls = 0, reduced = false;
+    let win = dev.win || DEFAULTS.win, chunk = dev.chunk || DEFAULTS.chunk;
     while (acked < d.length) {                                   // pipelined DATA, resync on gaps / losses
-      while (nxt < d.length && inflight.size < WINDOW) {
-        const n = Math.min(MAX_DATA, d.length - nxt);
+      while (nxt < d.length && inflight.size < win) {
+        if (gap) await sleep(gap);
+        const n = Math.min(chunk, d.length - nxt);
         inflight.set(L.send(DATA, cat(u32(nxt), d.subarray(nxt, nxt + n))), nxt); nxt += n;
       }
-      const r = await L.recv(TIMEOUT);
-      if (!r) { inflight.clear(); nxt = acked; continue; }
+      const r = await L.recv(tmo);
+      if (!r) {
+        if (fixed || gap) { if (++stalls >= MAX_STALLS) throw new Error(`${p}: no answer to data messages with these settings (${acked} of ${d.length} bytes)`);
+                            log(`  ${p}: no answer, resending from byte ${acked} (${stalls} of ${MAX_STALLS - 1})`); }
+        else if (win > 1) { win = 1; log(`  ${p}: no answer from the OP-1, sending one message at a time`); }
+        else if (chunk > MIN_DATA) { chunk = Math.max(MIN_DATA, chunk >> 1); log(`  ${p}: no answer, trying ${chunk}-byte messages`); }
+        else if (++stalls >= MAX_STALLS)
+          throw new Error(`${p}: the OP-1 does not answer data messages (${acked} of ${d.length} bytes sent, ` +
+                          `${MIN_DATA}-byte messages one at a time). Restart it and try again; if it keeps happening, ` +
+                          'install the plugin with a firmware file (bootloader update)');
+        else log(`  ${p}: no answer from the OP-1, resending from byte ${acked} (${stalls} of ${MAX_STALLS - 1})`);
+        reduced = true; inflight.clear(); nxt = acked; continue;
+      }
       if (r.cmd !== DATA || !inflight.has(r.seq)) continue;
       inflight.delete(r.seq);
       if (r.st !== 0 && r.st !== 5) throw new Error(`${p}: data refused (${ST[r.st] || r.st})`);
       const w = rd32(r.pl);
       if (r.st === 5) { inflight.clear(); nxt = w; }
+      if (w > acked) {
+        stalls = 0;
+        if (reduced && (dev.win !== win || dev.chunk !== chunk)) log(`  the OP-1 answers ${chunk}-byte messages, ${win} at a time: using that`);
+        dev.win = win; dev.chunk = chunk;
+      }
       acked = Math.max(acked, w);
       if (acked - last >= 262144 || acked === d.length) {
         last = acked;
@@ -185,4 +245,64 @@ export async function push(dev, files, log, deletes = []) {   // deletes: plugin
   }
   log(`sent ${files.length} files (${(total / 1e6).toFixed(2)} MB)` + (deletes.length ? `, ${deletes.length} deletes` : '') +
       '; the OP-1 restarts and applies the update.');
+}
+
+// Probe the USB link (no file is written): after ABORT the OP-1 answers every DATA message with "state" (no file
+// open), whatever its size. So DATA messages of growing size show which sizes get through, and bursts with and
+// without a gap show whether pacing matters. log(text); returns { sizes: [{ data, wire, ok, ms }], bursts: [...] }.
+export async function probe(dev, log, opts = {}) {
+  const L = dev.link, tmo = opts.timeout || 1500;
+  L.attach(); L.q = [];
+  log(`probe: ${dev.ident || 'op1r'}, update protocol ${dev.proto}`);
+  const a = await L.ask(ABORT);
+  log(`  ABORT answered (${ST[a.st] || a.st})`);
+  const one = async (n) => {
+    const t = performance.now(), seq = L.send(DATA, cat(u32(0), new Uint8Array(n).map((_, i) => i * 37)));
+    for (let r; (r = await L.recv(tmo));) if (r.cmd === DATA && r.seq === seq) return { ok: true, st: r.st, ms: performance.now() - t };
+    return { ok: false };
+  };
+  const wire = (n) => build(DATA, 0, new Uint8Array(4 + n)).length;
+  const sizes = [];
+  log('  DATA size test (data bytes -> bytes on the wire): answered?');
+  const alive = async () => {                                     // does the OP-1 still answer anything?
+    for (let i = 0; i < 2; i++) {
+      const seq = L.send(HELLO);
+      for (let r; (r = await L.recv(tmo));) if (r.cmd === HELLO && r.seq === seq) return true;
+    }
+    return false;
+  };
+  let dead = null;
+  for (const n of [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192]) {
+    let r = await one(n);
+    if (!r.ok) r = await one(n);                                   // one retry
+    sizes.push({ data: n, wire: wire(n), ok: r.ok, ms: r.ms });
+    const up = await alive();
+    log(`    ${String(n).padStart(3)} -> ${String(wire(n)).padStart(3)} B: ` + (r.ok ? `yes (${ST[r.st] || r.st}, ${r.ms.toFixed(0)} ms)` : 'NO ANSWER') +
+        (up ? '' : '  -- and the OP-1 no longer answers HELLO'), up ? undefined : 'err');
+    if (!up) { dead = wire(n); break; }
+  }
+  if (dead) {
+    log(`  the OP-1 stopped answering anything after a ${dead}-byte DATA message: it breaks on receiving it ` +
+        '(restart the OP-1 before trying again)', 'err');
+    return { sizes, bursts: [], dead };
+  }
+  const good = sizes.filter((s) => s.ok), bad = sizes.filter((s) => !s.ok);
+  if (!bad.length) log('  every size got through');
+  else if (!good.length) log('  no DATA message got through, at any size: the OP-1 does not handle DATA at all', 'err');
+  else log(`  largest answered: ${Math.max(...good.map((s) => s.wire))} B on the wire; first lost: ${bad[0].wire} B`);
+  const bursts = [], n = good.length ? Math.max(...good.map((s) => s.data)) : 0;
+  if (good.length) {
+    log(`  bursts of 8 DATA messages of ${n} data bytes:`);
+    for (const g of [0, 5, 20, 50]) {
+      L.q = [];
+      const seqs = new Set(), t = performance.now();
+      for (let i = 0; i < 8; i++) { if (g && i) await sleep(g); seqs.add(L.send(DATA, cat(u32(0), new Uint8Array(n)))); }
+      let got = 0;
+      for (let r; got < 8 && (r = await L.recv(tmo));) if (r.cmd === DATA && seqs.has(r.seq)) got++;
+      bursts.push({ gap: g, got, ms: performance.now() - t });
+      log(`    ${String(g).padStart(2)} ms apart: ${got} of 8 answered (${(performance.now() - t).toFixed(0)} ms)`);
+    }
+  }
+  log(`  ABORT again (${ST[(await L.ask(ABORT)).st]})`);
+  return { sizes, bursts };
 }

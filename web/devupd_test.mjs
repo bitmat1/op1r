@@ -1,6 +1,7 @@
 // node devupd_test.mjs: devupd.js framing against tools/op1push.py vectors + a push to a simulated OP-1
 import * as DU from './devupd.js';
 import assert from 'node:assert';
+DU.DEFAULTS.chunk = 192; DU.DEFAULTS.win = 8;                    // op1r's original start settings (the last test uses the new ones)
 // vectors from op1push.py: build(DATA, 300, bytes(range(200))[:12]), crc32(b'123456789')
 assert.equal(DU.crc32(new TextEncoder().encode('123456789')), 0xCBF43926);
 const v = DU.build(DU.DATA, 300, Uint8Array.from({ length: 12 }, (_, i) => i * 23));
@@ -59,4 +60,96 @@ await DU.push(dev3, [['plugins/x.op1p', new Uint8Array(3)], ['plugins/z.op1p', b
 assert.deepEqual(Object.keys(staged), ['plugins/z.op1p']); assert.deepEqual(deleted, ['plugins/y.op1p']);
 proto = 2; const dev2 = await DU.find(midi);
 await assert.rejects(DU.list(dev2)); await assert.rejects(DU.push(dev2, [], () => {}, ['plugins/y.op1p']));
+
+// a slow OP-1 (protocol 3): mode 'busy' loses every DATA that arrives while another one is unanswered (a full
+// window overruns its RX ring), 'big' loses every message longer than 100 bytes (long SysEx not getting through),
+// 'dead' never answers DATA; everything else is answered
+async function slowDevice(mode) {
+  let handler, file = null, pend = 0, broken = false;
+  const done = {};
+  const o = { name: 'OP-1 MIDI', send(m) {
+    m = Uint8Array.from(m); const pl = DU.unpack7(m.subarray(8, m.length - 1)), cmd = m[5];
+    const rep = (st, p = []) => handler({ data: DU.build(m[5] | 0x40, m[6] | m[7] << 7, Uint8Array.from([st, ...p])) });
+    if (cmd === DU.DATA) {
+      if (m.length > 100 && mode === 'breaks') broken = true;
+      if (broken || mode === 'dead' || (mode === 'busy' && pend) || (mode === 'big' && m.length > 100)) return;   // lost
+      pend++;
+      return setTimeout(() => {
+        pend--;
+        if (!file) return rep(2);                                // no BEGIN: "state", as du.c
+        const off = pl[0] | pl[1] << 8 | pl[2] << 16 | pl[3] << 24;
+        if (off !== file.length) return rep(5, u32(file.length));
+        file.push(...pl.subarray(4)); rep(0, u32(file.length));
+      }, 3);
+    }
+    if (broken) return;
+    setTimeout(() => {
+      if (cmd === DU.HELLO) return rep(0, u32(3));
+      if (cmd === DU.IDENT) return rep(0, [...new TextEncoder().encode('op1r 34')]);
+      if (cmd === DU.STAT) return rep(10);
+      if (cmd === DU.BEGIN) { file = []; return rep(0); }
+      if (cmd === DU.END) { done.data = Uint8Array.from(file); file = null; return rep(0); }
+      if (cmd === DU.ABORT) { file = null; return rep(0); }
+      return rep(0);                                             // ABORT, COMMIT
+    }, 1);
+  } };
+  const i = { name: 'OP-1 MIDI', set onmidimessage(f) { handler = f; } };
+  const d = await DU.find({ outputs: new Map([[1, o]]), inputs: new Map([[1, i]]) });
+  return { d, done };
+}
+{
+  const { d, done } = await slowDevice('busy'), lines = [];
+  await DU.push(d, [['plugins/fix.op1p', big]], (t) => lines.push(t), [], { timeout: 30 });
+  assert.deepEqual(done.data, big);
+  assert(lines.some((t) => /one message at a time/.test(t)));
+}
+{
+  const { d } = await slowDevice('dead');
+  await assert.rejects(DU.push(d, [['plugins/fix.op1p', big]], () => {}, [], { timeout: 10 }), /does not answer data messages \(0 of 5000/);
+}
+{
+  const { d, done } = await slowDevice('big'), lines = [];
+  await DU.push(d, [['plugins/fix.op1p', big]], (t) => lines.push(t), [], { timeout: 10 });
+  assert.deepEqual(done.data, big);
+  assert(lines.some((t) => /answers 48-byte messages, 1 at a time/.test(t)), lines.join('\n'));
+  assert.equal(d.chunk, 48);
+  const again = [];                                               // the same connection: starts at the size that works
+  await DU.push(d, [['plugins/fix2.op1p', big.subarray(0, 3000)]], (t) => again.push(t), [], { timeout: 10 });
+  assert(!again.some((t) => /no answer/.test(t)), again.join('\n'));
+  assert.deepEqual(done.data, big.subarray(0, 3000));
+}
+{                                                                 // probe: finds the size limit
+  const { d } = await slowDevice('big'), lines = [];
+  const r = await DU.probe(d, (t) => lines.push(t), { timeout: 20 });
+  assert(r.sizes.find((x) => x.data === 48).ok && !r.sizes.find((x) => x.data === 96).ok, lines.join('\n'));
+  assert(lines.some((t) => /largest answered: \d+ B on the wire; first lost/.test(t)));
+  assert(r.bursts.length === 4);
+}
+{                                                                 // probe: DATA never answered
+  const { d } = await slowDevice('dead'), lines = [];
+  const r = await DU.probe(d, (t) => lines.push(t), { timeout: 5 });
+  assert(r.sizes.every((x) => !x.ok) && lines.some((t) => /no DATA message got through/.test(t)));
+}
+{                                                                 // fixed settings + pause + trace
+  const { d, done } = await slowDevice('big'), tl = [];
+  DU.trace.fn = (t) => tl.push(t); DU.trace.t0 = performance.now();
+  await DU.push(d, [['plugins/fix.op1p', big.subarray(0, 600)]], () => {}, [], { timeout: 20, chunk: 32, gap: 2 });
+  DU.trace.fn = null;
+  assert.deepEqual(done.data, big.subarray(0, 600));
+  assert(tl.some((t) => /-> DATA seq \d+, \d+ B/.test(t)) && tl.some((t) => /<- DATA reply seq \d+: ok/.test(t)), tl.slice(0, 5).join('\n'));
+  const { d: d2 } = await slowDevice('big');                     // fixed size that does not get through: rejected
+  await assert.rejects(DU.push(d2, [['plugins/fix.op1p', big]], () => {}, [], { timeout: 5, chunk: 192 }), /with these settings/);
+}
+{                                                                 // probe: a message that breaks the OP-1
+  const { d } = await slowDevice('breaks'), lines = [];
+  const r = await DU.probe(d, (t) => lines.push(t), { timeout: 10 });
+  assert.equal(r.dead, DU.build(DU.DATA, 0, new Uint8Array(4 + 80)).length, lines.join('\n'));
+  assert(lines.some((t) => /stopped answering anything after a \d+-byte DATA message/.test(t)));
+}
+{                                                                 // the new defaults: an OP-1 that breaks on long messages
+  DU.DEFAULTS.chunk = 48; DU.DEFAULTS.win = 1;
+  const { d, done } = await slowDevice('breaks'), lines = [];
+  await DU.push(d, [['plugins/wheel.op1p', big]], (t) => lines.push(t), [], { timeout: 10 });
+  assert.deepEqual(done.data, big); assert(!lines.some((t) => /no answer/.test(t)));
+}
 console.log('devupd.js: ok');
