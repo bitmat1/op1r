@@ -3,9 +3,9 @@
 Newest first. Each entry lists the changes since the previous push and the output checksum of
 `patch_op1.py` for that version. The input is always the original R246 image.
 
-## 2026-10-16 01:00 — op1r 35
+## 2026-10-16 02:00 — op1r 35
 
-Output `bb478e12703b7127bae5617f0bd5923e0a2d6c557863564fd9930c929a890082` (all plugins)
+Output `09bdccae71403d6ffe98e19b78f9e7b81455b51ec47702d28d269cbb82115903` (all plugins)
 
 ### Added
 - **MIDI sequencer** (opt-in on clock + T2, green **MIDI SEQ**, off by default): SEQ + TAPE opens a 4-track MIDI
@@ -14,7 +14,8 @@ Output `bb478e12703b7127bae5617f0bd5923e0a2d6c557863564fd9930c929a890082` (all p
   recording of notes and CCs; scissors selection, lift (Shift: all tracks, playhead jumps to the first note), drop.
   One song file; while off, SEQ + TAPE is stock and the sequencer does no work.
   From stop, REC held or Shift + REC waits for the first note, which starts the tape (recording stays on until
-  STOP); REC held + metronome counts in first. Idea by **ultralazr**, thanks!
+  STOP); REC held + metronome counts in first. Quantize (Shift + blue: off, 1/4 … 1/32, 1/8T, 1/16T, one grid
+  per song): a take snaps when it ends, Shift + blue press quantizes the selection. Idea by **ultralazr**, thanks!
 - **Sequencers as plugin files**: euclid, dots, oracle and peal are plugins now (selectable in the web patcher,
   installed / removed without a firmware update). A sound whose sequencer plugin is missing loads with the pattern
   sequencer instead of stopping the OP-1.

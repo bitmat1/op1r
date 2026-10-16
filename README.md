@@ -102,7 +102,8 @@ with:
   recorder that runs with the tape (same position, play / stop, loop, markers). **T1–T4** select the track
   (Shift: mute), hold **REC** to record the selected track (Shift + REC latched); from stop, REC held or Shift + REC
   waits for the first note, which starts the tape (recording then stays on until STOP), and **REC held + metronome**
-  counts in (4 / 8 / 16 beats, settings page) before it starts. **White press** switches between
+  counts in (4 / 8 / 16 beats, settings page) before it starts. **Shift + blue** turn sets the quantize grid (off,
+  1/4 … 1/32, 1/8T, 1/16T): a take's notes snap when it ends; **Shift + blue press** quantizes the selection. **White press** switches between
   the track's input and output, **white turn** chooses I (keyboard), S (stock sequencers / arpeggio), M1–M16 (USB
   MIDI channel) as input and I (instrument), S (stock sequencer), M1–M16 (USB MIDI out) as output. **Scissors** sets
   the selection start / end, **lift** cuts it from the track (Shift + lift: all tracks) and moves the playhead to the
@@ -210,7 +211,7 @@ version. The firmware content is still verified identical, and `--accept-recompr
 | | SHA-256 |
 |---|---|
 | input `op1_246.op1` (original R246) | `c5315218f825f143b415ca554516541898abee843d3a236df0b54c04e1fb13a9` |
-| output (reference build, all plugins) | `bb478e12703b7127bae5617f0bd5923e0a2d6c557863564fd9930c929a890082` (also `python3 patch_op1.py --info`) |
+| output (reference build, all plugins) | `09bdccae71403d6ffe98e19b78f9e7b81455b51ec47702d28d269cbb82115903` (also `python3 patch_op1.py --info`) |
 
 Install the result like any OP-1 update (bootloader update mode). The bootloader is not modified, so the
 original `op1_246.op1` can always be flashed back. **Use at your own risk.**
